@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS listings (
   approved_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+-- Note: middleman_id is added via migration below (required field)
 
 -- Notifications table
 CREATE TABLE IF NOT EXISTS notifications (
@@ -196,6 +197,7 @@ BEGIN
   END IF;
   
   -- Add middleman_id column if it doesn't exist
+  -- Note: Column is nullable in DB for backward compatibility, but required at application level
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns 
     WHERE table_name = 'listings' AND column_name = 'middleman_id'
@@ -208,7 +210,7 @@ BEGIN
       WHERE constraint_name = 'listings_middleman_id_fkey'
     ) THEN
       ALTER TABLE listings ADD CONSTRAINT listings_middleman_id_fkey 
-        FOREIGN KEY (middleman_id) REFERENCES middlemen(id) ON DELETE SET NULL;
+        FOREIGN KEY (middleman_id) REFERENCES middlemen(id) ON DELETE RESTRICT;
     END IF;
   END IF;
 END $$;

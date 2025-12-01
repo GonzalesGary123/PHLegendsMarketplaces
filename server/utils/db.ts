@@ -47,12 +47,20 @@ export async function addListingToDB(
   const images = Array.isArray(input.images) ? input.images : [];
   
   // Validate required fields before insert
-  if (!input.nickname || !input.server || !input.growthPower || !input.askingPrice || !input.contactNumber) {
-    throw new Error('Missing required fields: nickname, server, growthPower, askingPrice, or contactNumber');
+  if (!input.nickname || !input.server || !input.growthPower || !input.askingPrice || !input.contactNumber || !input.middlemanId) {
+    throw new Error('Missing required fields: nickname, server, growthPower, askingPrice, contactNumber, or middlemanId');
   }
   
   if (classesList.length === 0) {
     throw new Error('At least one class is required');
+  }
+
+  // Validate middlemanId is a valid UUID
+  if (input.middlemanId) {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(input.middlemanId)) {
+      throw new Error('Invalid middleman ID format');
+    }
   }
   
   console.log('📤 Inserting listing with data:', {
@@ -72,7 +80,7 @@ export async function addListingToDB(
     .from("listings")
     .insert({
       user_id: userIdValue,
-      middleman_id: input.middlemanId || null,
+      middleman_id: input.middlemanId, // Required, no longer nullable
       nickname: input.nickname,
       server: input.server,
       growth_power: input.growthPower,

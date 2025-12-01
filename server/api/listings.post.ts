@@ -109,6 +109,13 @@ export default defineEventHandler(async (event) => {
       });
     }
 
+    if (!middlemanId) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: "Middleman selection is required.",
+      });
+    }
+
     // Validate and sanitize classes list
     classesList = validateStringArray(
       classes.split(",").map((item) => item.trim()),
@@ -136,7 +143,7 @@ export default defineEventHandler(async (event) => {
   try {
     const listing = await addListingToDB(event, {
       userId,
-      middlemanId: middlemanId || undefined,
+      middlemanId: middlemanId, // Required, no longer optional
       nickname,
       server,
       growthPower,

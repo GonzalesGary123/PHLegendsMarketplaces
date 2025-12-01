@@ -400,7 +400,7 @@
             <input
               v-model="form.contactLink"
               type="url"
-              placeholder="Discord, Telegram, or social media link"
+              placeholder="Social media link"
               :class="[
                 'w-full rounded-lg border px-4 py-3 text-sm transition-all duration-300 ease-in-out',
                 theme === 'dark'
@@ -434,10 +434,11 @@
           <div class="space-y-2">
             <label class="flex items-center gap-2 text-sm font-semibold"
               :class="theme === 'dark' ? 'text-slate-200' : 'text-slate-700'">
-              <span>Middleman (Optional)</span>
+              <span>Middleman *</span>
             </label>
             <select
               v-model="form.middlemanId"
+              required
               :class="[
                 'w-full rounded-lg border px-4 py-3 text-sm transition-all duration-300 ease-in-out',
                 theme === 'dark'
@@ -445,7 +446,7 @@
                   : 'border-slate-300 bg-white text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20',
               ]"
             >
-              <option value="">None</option>
+              <option value="" disabled>Select a middleman</option>
               <option
                 v-for="middleman in middlemen"
                 :key="middleman.id"
@@ -454,6 +455,9 @@
                 {{ middleman.name }} ({{ middleman.email }})
               </option>
             </select>
+            <p v-if="middlemen.length === 0" class="text-xs text-amber-500">
+              ⚠️ No middlemen available. Please contact an admin to add middlemen.
+            </p>
           </div>
         </div>
 
@@ -3070,9 +3074,10 @@ const onSubmit = async () => {
     !form.server ||
     !form.growthPower ||
     !form.askingPrice ||
-    !form.contactNumber
+    !form.contactNumber ||
+    !form.middlemanId
   ) {
-    error.value = "Please fill in all required fields.";
+    error.value = "Please fill in all required fields, including selecting a middleman.";
     return;
   }
 
