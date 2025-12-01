@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt'  // ← ADD THIS LINE
 import type { Listing } from "./listingsStore";
 import type { User } from "./usersStore";
 import type { Notification } from "./notificationsStore";
+import type { Middleman } from "./middlemenStore";
 
 export async function addListingToDB(
   event: H3Event,
@@ -12,19 +13,74 @@ export async function addListingToDB(
   const supabase = await getSupabaseServer(event)
 
   console.log('💾 Saving listing to Supabase...');
+  console.log('Input data:', {
+    userId: input.userId,
+    nickname: input.nickname,
+    server: input.server,
+    growthPower: input.growthPower,
+    classesList: input.classesList,
+    askingPrice: input.askingPrice,
+    contactLink: input.contactLink,
+    contactNumber: input.contactNumber,
+    imagesCount: input.images?.length || 0,
+    status: input.status || 'pending',
+  });
+  
+  // Validate userId is a valid UUID if provided
+  let userIdValue: string | null = null;
+  if (input.userId) {
+    // UUID validation regex
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(input.userId)) {
+      userIdValue = input.userId;
+    } else {
+      console.warn('⚠️ Invalid UUID format for userId:', input.userId);
+      // Still allow it, but log a warning - might be a test/dev scenario
+      userIdValue = input.userId;
+    }
+  }
+  
+  // Ensure arrays are properly formatted and not empty (use empty array if needed)
+  const classesList = Array.isArray(input.classesList) && input.classesList.length > 0 
+    ? input.classesList 
+    : [];
+  const images = Array.isArray(input.images) ? input.images : [];
+  
+  // Validate required fields before insert
+  if (!input.nickname || !input.server || !input.growthPower || !input.askingPrice || !input.contactNumber) {
+    throw new Error('Missing required fields: nickname, server, growthPower, askingPrice, or contactNumber');
+  }
+  
+  if (classesList.length === 0) {
+    throw new Error('At least one class is required');
+  }
+  
+  console.log('📤 Inserting listing with data:', {
+    user_id: userIdValue,
+    nickname: input.nickname,
+    server: input.server,
+    growth_power: input.growthPower,
+    classes_list: classesList,
+    asking_price: input.askingPrice,
+    contact_link: input.contactLink || null,
+    contact_number: input.contactNumber,
+    images: images,
+    status: input.status || 'pending',
+  });
   
   const { data, error } = await supabase
     .from("listings")
     .insert({
-      user_id: input.userId ?? null,
+      user_id: userIdValue,
+      middleman_id: input.middlemanId || null,
       nickname: input.nickname,
       server: input.server,
       growth_power: input.growthPower,
-      classes_list: input.classesList,
+      classes_list: classesList,
       asking_price: input.askingPrice,
       contact_link: input.contactLink || null,
       contact_number: input.contactNumber,
-      images: input.images,
+      images: images,
       status: input.status || 'pending',
     })
     .select()
@@ -32,6 +88,12 @@ export async function addListingToDB(
 
   if (error) {
     console.error('❌ Error saving listing:', error);
+    console.error('Error details:', {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code
+    });
     throw new Error(`Failed to save listing: ${error.message}`);
   }
 
@@ -61,6 +123,7 @@ export async function getListingsFromDB(event: H3Event, status?: 'pending' | 'ap
 
   console.log('📖 Fetching listings from Supabase...', status ? `(status: ${status})` : '');
 
+  // First, get listings
   let query = supabase
     .from("listings")
     .select("*")
@@ -80,9 +143,36 @@ export async function getListingsFromDB(event: H3Event, status?: 'pending' | 'ap
 
   console.log(`✅ Fetched ${data?.length || 0} listings`);
 
+  // Get all unique middleman IDs
+  const middlemanIds = [...new Set((data || [])
+    .map(item => item.middleman_id)
+    .filter(id => id !== null && id !== undefined))];
+
+  // Fetch middlemen data if there are any
+  let middlemenMap = new Map();
+  if (middlemanIds.length > 0) {
+    const { data: middlemenData, error: middlemenError } = await supabase
+      .from("middlemen")
+      .select("id, name, email, link")
+      .in("id", middlemanIds);
+
+    if (!middlemenError && middlemenData) {
+      middlemenData.forEach((m: any) => {
+        middlemenMap.set(m.id, {
+          id: m.id,
+          name: m.name,
+          email: m.email,
+          link: m.link || undefined,
+        });
+      });
+    }
+  }
+
   return (data || []).map((item) => ({
     id: item.id,
     userId: item.user_id || undefined,
+    middlemanId: item.middleman_id || undefined,
+    middleman: item.middleman_id ? middlemenMap.get(item.middleman_id) : undefined,
     nickname: item.nickname,
     server: item.server,
     growthPower: item.growth_power,
@@ -393,5 +483,78 @@ export async function markAllNotificationsAsRead(
   if (error) {
     console.error('❌ Error marking all notifications as read:', error);
     throw new Error(`Failed to mark all notifications as read: ${error.message}`);
+  }
+}
+
+// Middlemen functions
+export async function getMiddlemenFromDB(event: H3Event): Promise<Middleman[]> {
+  const { getSupabaseServer } = await import('./supabase')
+  const supabase = await getSupabaseServer(event)
+
+  const { data, error } = await supabase
+    .from("middlemen")
+    .select("*")
+    .order("name", { ascending: true });
+
+  if (error) {
+    console.error('❌ Error fetching middlemen:', error);
+    throw new Error(`Failed to fetch middlemen: ${error.message}`);
+  }
+
+  return (data || []).map((item) => ({
+    id: item.id,
+    name: item.name,
+    email: item.email,
+    link: item.link || undefined,
+    createdAt: item.created_at,
+  }));
+}
+
+export async function addMiddlemanToDB(
+  event: H3Event,
+  input: { name: string; email: string; link?: string }
+): Promise<Middleman> {
+  const { getSupabaseServer } = await import('./supabase')
+  const supabase = await getSupabaseServer(event)
+
+  const { data, error } = await supabase
+    .from("middlemen")
+    .insert({
+      name: input.name,
+      email: input.email,
+      link: input.link || null,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('❌ Error adding middleman:', error);
+    throw new Error(`Failed to add middleman: ${error.message}`);
+  }
+
+  return {
+    id: data.id,
+    name: data.name,
+    email: data.email,
+    link: data.link || undefined,
+    createdAt: data.created_at,
+  };
+}
+
+export async function deleteMiddlemanFromDB(
+  event: H3Event,
+  middlemanId: string
+): Promise<void> {
+  const { getSupabaseServer } = await import('./supabase')
+  const supabase = await getSupabaseServer(event)
+
+  const { error } = await supabase
+    .from("middlemen")
+    .delete()
+    .eq("id", middlemanId);
+
+  if (error) {
+    console.error('❌ Error deleting middleman:', error);
+    throw new Error(`Failed to delete middleman: ${error.message}`);
   }
 }

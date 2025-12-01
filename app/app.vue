@@ -430,6 +430,31 @@
               ]"
             />
           </div>
+
+          <div class="space-y-2">
+            <label class="flex items-center gap-2 text-sm font-semibold"
+              :class="theme === 'dark' ? 'text-slate-200' : 'text-slate-700'">
+              <span>Middleman (Optional)</span>
+            </label>
+            <select
+              v-model="form.middlemanId"
+              :class="[
+                'w-full rounded-lg border px-4 py-3 text-sm transition-all duration-300 ease-in-out',
+                theme === 'dark'
+                  ? 'border-slate-600 bg-slate-700 text-slate-100 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
+                  : 'border-slate-300 bg-white text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20',
+              ]"
+            >
+              <option value="">None</option>
+              <option
+                v-for="middleman in middlemen"
+                :key="middleman.id"
+                :value="middleman.id"
+              >
+                {{ middleman.name }} ({{ middleman.email }})
+              </option>
+            </select>
+          </div>
         </div>
 
         <div class="space-y-3">
@@ -439,7 +464,7 @@
           </label>
           <p class="text-xs"
             :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-500'">
-            Upload screenshots of your character, inventory, stats, and other important details
+            Upload up to 5 screenshots (max 5MB each) of your character, inventory, stats, and other important details
           </p>
           <div
             :class="[
@@ -464,7 +489,7 @@
           />
             <p class="mt-2 text-xs text-center"
               :class="theme === 'dark' ? 'text-slate-500' : 'text-slate-400'">
-              PNG, JPG, GIF up to 10MB each
+              PNG, JPG, WebP, GIF up to 5MB each (max 5 images)
             </p>
           </div>
 
@@ -1134,8 +1159,23 @@
                   <span>❌</span>
                   <span>Sold Out</span>
                 </div>
+                <!-- Show middleman contact if listing has middleman, otherwise show seller contact -->
                 <a
-                  v-else-if="item.contactLink"
+                  v-if="item.middleman && !shouldShowSellerContact(item)"
+                  :href="item.middleman.link || `mailto:${item.middleman.email}`"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  @click.stop
+                  :class="[
+                    'w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white transition-all duration-300 ease-in-out shadow-md',
+                    'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 hover:shadow-lg hover:scale-[1.02]',
+                  ]"
+                >
+                  <span>💼</span>
+                  <span>Contact Middleman</span>
+                </a>
+                <a
+                  v-else-if="shouldShowSellerContact(item) && item.contactLink"
                   :href="item.contactLink"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -1160,12 +1200,30 @@
                   <span>👁️</span>
                   <span>View Details</span>
                 </button>
+                <!-- Show middleman email if listing has middleman and user is not the middleman -->
                 <div 
-                  v-if="item.status !== 'sold' && item.contactNumber"
+                  v-if="item.status !== 'sold' && item.middleman && !shouldShowSellerContact(item)"
                   class="flex items-center justify-center gap-2 text-xs pt-1"
                   :class="theme === 'dark' ? 'text-slate-500' : 'text-slate-600'">
-                  <span>📞</span>
-                  <span>{{ item.contactNumber }}</span>
+                  <span>💼</span>
+                  <span>{{ item.middleman.name }} - {{ item.middleman.email }}</span>
+                </div>
+                <!-- Show seller contact info only if no middleman or user is the assigned middleman -->
+                <div 
+                  v-else-if="item.status !== 'sold' && shouldShowSellerContact(item) && item.contactNumber"
+                  class="flex flex-col items-center justify-center gap-1 text-xs pt-1"
+                  :class="theme === 'dark' ? 'text-slate-500' : 'text-slate-600'">
+                  <div class="flex items-center gap-2">
+                    <span>📞</span>
+                    <span>{{ item.contactNumber }}</span>
+                  </div>
+                  <div v-if="item.contactLink" class="flex items-center gap-2">
+                    <span>🔗</span>
+                    <a :href="item.contactLink" target="_blank" rel="noopener noreferrer"
+                      class="text-emerald-500 hover:text-emerald-400 underline text-xs">
+                      Contact Link
+                    </a>
+                  </div>
                 </div>
                 <div class="flex items-center justify-center gap-2 text-xs pt-1"
                   :class="theme === 'dark' ? 'text-slate-500' : 'text-slate-600'">
@@ -1303,24 +1361,74 @@
           <div
             class="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
           >
+            <!-- Show middleman info if listing has middleman and user is not the middleman -->
             <div
-              v-if="selectedListing.status !== 'sold'"
-              class="flex items-center gap-2 text-sm"
-              :class="theme === 'dark' ? 'text-slate-300' : 'text-slate-700'"
+              v-if="selectedListing.status !== 'sold' && selectedListing.middleman && !shouldShowSellerContact(selectedListing)"
+              class="flex flex-col gap-2"
             >
-              <span>📞</span>
-              <span>{{ selectedListing.contactNumber }}</span>
+              <div class="flex items-center gap-2 text-sm"
+                :class="theme === 'dark' ? 'text-slate-300' : 'text-slate-700'">
+                <span>💼</span>
+                <span class="font-semibold">{{ selectedListing.middleman.name }}</span>
+              </div>
+              <div class="flex items-center gap-2 text-sm"
+                :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+                <span>📧</span>
+                <span>{{ selectedListing.middleman.email }}</span>
+              </div>
+              <a
+                v-if="selectedListing.middleman.link"
+                :href="selectedListing.middleman.link"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-emerald-500 hover:text-emerald-400 underline text-sm"
+              >
+                {{ selectedListing.middleman.link }}
+              </a>
+            </div>
+            <!-- Show seller contact info only if no middleman or user is the assigned middleman -->
+            <div
+              v-else-if="selectedListing.status !== 'sold' && shouldShowSellerContact(selectedListing)"
+              class="flex flex-col gap-2"
+            >
+              <div class="flex items-center gap-2 text-sm"
+                :class="theme === 'dark' ? 'text-slate-300' : 'text-slate-700'">
+                <span>📞</span>
+                <span>{{ selectedListing.contactNumber }}</span>
+              </div>
+              <div v-if="selectedListing.contactLink" class="flex items-center gap-2 text-sm"
+                :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+                <span>🔗</span>
+                <a :href="selectedListing.contactLink" target="_blank" rel="noopener noreferrer"
+                  class="text-emerald-500 hover:text-emerald-400 underline">
+                  {{ selectedListing.contactLink }}
+                </a>
+              </div>
             </div>
             <div
-              v-else
+              v-else-if="selectedListing.status === 'sold'"
               class="flex items-center gap-2 text-sm"
               :class="theme === 'dark' ? 'text-red-400' : 'text-red-600'"
             >
               <span>❌</span>
               <span>This account has been sold</span>
             </div>
+            <!-- Contact buttons -->
             <a
-              v-if="selectedListing.status !== 'sold' && selectedListing.contactLink"
+              v-if="selectedListing.status !== 'sold' && selectedListing.middleman && !shouldShowSellerContact(selectedListing)"
+              :href="selectedListing.middleman.link || `mailto:${selectedListing.middleman.email}`"
+              target="_blank"
+              rel="noopener noreferrer"
+              :class="[
+                'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold',
+                'bg-blue-600 text-white hover:bg-blue-500',
+              ]"
+            >
+              <span>💼</span>
+              <span>Contact Middleman</span>
+            </a>
+            <a
+              v-else-if="selectedListing.status !== 'sold' && shouldShowSellerContact(selectedListing) && selectedListing.contactLink"
               :href="selectedListing.contactLink"
               target="_blank"
               rel="noopener noreferrer"
@@ -1332,6 +1440,13 @@
               <span>💬</span>
               <span>Contact Seller</span>
             </a>
+            <div
+              v-else-if="selectedListing.status !== 'sold' && shouldShowSellerContact(selectedListing) && !selectedListing.contactLink && selectedListing.contactNumber"
+              class="text-sm"
+              :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'"
+            >
+              Use contact number above to reach seller
+            </div>
             <div
               v-else-if="selectedListing.status === 'sold'"
               :class="[
@@ -1900,7 +2015,7 @@
           <div>
             <h2 class="text-3xl font-bold mb-2"
               :class="theme === 'dark' ? 'text-slate-100' : 'text-slate-900'">
-              ⚙️ Admin Panel
+              Admin Panel
             </h2>
             <p class="text-sm"
               :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
@@ -2214,6 +2329,190 @@
             </div>
           </div>
         </div>
+
+        <!-- Middlemen Management Section -->
+        <div class="mt-12">
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
+            <div>
+              <h3 class="text-2xl font-bold mb-2"
+                :class="theme === 'dark' ? 'text-slate-100' : 'text-slate-900'">
+                Middlemen Management
+              </h3>
+              <p class="text-sm"
+                :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+                Add or remove middlemen that users can select when posting listings
+              </p>
+            </div>
+          </div>
+
+          <!-- Add Middleman Form -->
+          <div
+            :class="[
+              'rounded-lg border p-6 mb-6 transition-all duration-300 ease-in-out',
+              theme === 'dark'
+                ? 'border-slate-700 bg-slate-800/50'
+                : 'border-slate-300 bg-white',
+            ]"
+          >
+            <h4 class="text-lg font-semibold mb-4"
+              :class="theme === 'dark' ? 'text-slate-200' : 'text-slate-800'">
+              Add New Middleman
+            </h4>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div>
+                <label class="block text-sm font-medium mb-2"
+                  :class="theme === 'dark' ? 'text-slate-300' : 'text-slate-700'">
+                  Name *
+                </label>
+                <input
+                  v-model="newMiddleman.name"
+                  type="text"
+                  placeholder="Middleman Name"
+                  :class="[
+                    'w-full rounded-lg border px-4 py-2 text-sm transition-all duration-300 ease-in-out',
+                    theme === 'dark'
+                      ? 'border-slate-600 bg-slate-700 text-slate-100 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
+                      : 'border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20',
+                  ]"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-2"
+                  :class="theme === 'dark' ? 'text-slate-300' : 'text-slate-700'">
+                  Email *
+                </label>
+                <input
+                  v-model="newMiddleman.email"
+                  type="email"
+                  placeholder="middleman@example.com"
+                  :class="[
+                    'w-full rounded-lg border px-4 py-2 text-sm transition-all duration-300 ease-in-out',
+                    theme === 'dark'
+                      ? 'border-slate-600 bg-slate-700 text-slate-100 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
+                      : 'border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20',
+                  ]"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-2"
+                  :class="theme === 'dark' ? 'text-slate-300' : 'text-slate-700'">
+                  Link (Optional)
+                </label>
+                <input
+                  v-model="newMiddleman.link"
+                  type="url"
+                  placeholder="https://..."
+                  :class="[
+                    'w-full rounded-lg border px-4 py-2 text-sm transition-all duration-300 ease-in-out',
+                    theme === 'dark'
+                      ? 'border-slate-600 bg-slate-700 text-slate-100 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
+                      : 'border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20',
+                  ]"
+                />
+              </div>
+            </div>
+            <div class="flex items-center gap-4">
+              <button
+                type="button"
+                @click="addMiddleman"
+                :disabled="addingMiddleman"
+                :class="[
+                  'rounded-lg px-6 py-2 text-sm font-semibold text-white transition-all duration-300 ease-in-out',
+                  'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500',
+                  'disabled:opacity-50 disabled:cursor-not-allowed',
+                ]"
+              >
+                {{ addingMiddleman ? 'Adding...' : 'Add Middleman' }}
+              </button>
+              <p v-if="middlemanError" class="text-sm text-red-500">
+                {{ middlemanError }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Middlemen List -->
+          <div
+            v-if="loadingMiddlemen"
+            class="text-center py-8"
+            :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'"
+          >
+            Loading middlemen...
+          </div>
+
+          <div
+            v-else-if="middlemenError"
+            :class="[
+              'rounded-lg border p-6 text-center transition-all duration-300 ease-in-out',
+              theme === 'dark'
+                ? 'border-red-500/50 bg-red-500/10 text-red-300'
+                : 'border-red-300 bg-red-50 text-red-700',
+            ]"
+          >
+            <p class="text-sm font-medium">⚠️ {{ middlemenError }}</p>
+          </div>
+
+          <div
+            v-else-if="middlemen.length === 0"
+            :class="[
+              'rounded-lg border p-12 text-center transition-all duration-300 ease-in-out',
+              theme === 'dark'
+                ? 'border-slate-700 bg-slate-800/50'
+                : 'border-slate-300 bg-white',
+            ]"
+          >
+            <span class="text-5xl mb-4 block">👤</span>
+            <p class="text-sm font-medium"
+              :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+              No middlemen added yet. Add one above to get started.
+            </p>
+          </div>
+
+          <div
+            v-else
+            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+          >
+            <div
+              v-for="middleman in middlemen"
+              :key="middleman.id"
+              :class="[
+                'rounded-lg border p-4 transition-all duration-300 ease-in-out',
+                theme === 'dark'
+                  ? 'border-slate-700 bg-slate-800/50'
+                  : 'border-slate-300 bg-white',
+              ]"
+            >
+              <div class="flex items-start justify-between gap-3 mb-3">
+                <div class="flex-1">
+                  <h5 class="font-semibold mb-1"
+                    :class="theme === 'dark' ? 'text-slate-200' : 'text-slate-900'">
+                    {{ middleman.name }}
+                  </h5>
+                  <p class="text-sm mb-1"
+                    :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+                    📧 {{ middleman.email }}
+                  </p>
+                  <p v-if="middleman.link" class="text-sm"
+                    :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+                    🔗 <a :href="middleman.link" target="_blank" rel="noopener noreferrer"
+                      class="text-emerald-500 hover:text-emerald-400 underline">
+                      {{ middleman.link }}
+                    </a>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  @click="deleteMiddleman(middleman.id)"
+                  :class="[
+                    'rounded-lg px-3 py-1 text-sm font-semibold transition-all duration-300 ease-in-out',
+                    'bg-red-600 hover:bg-red-500 text-white',
+                  ]"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
     </main>
   </div>
@@ -2236,6 +2535,13 @@ type ListingResponse = {
   status?: 'pending' | 'approved' | 'rejected' | 'sold';
   approvedBy?: string;
   approvedAt?: string;
+  middlemanId?: string;
+  middleman?: {
+    id: string;
+    name: string;
+    email: string;
+    link?: string;
+  };
 };
 
 const phonePattern = /^[0-9+()\-\s]{7,20}$/;
@@ -2252,6 +2558,7 @@ const form = reactive({
   askingPrice: "",
   contactLink: "",
   contactNumber: "",
+  middlemanId: "",
 });
 
 const imagePreviews = ref<string[]>([]);
@@ -2341,11 +2648,150 @@ const unreadNotificationsCount = computed(() =>
   notifications.value.filter(n => !n.isRead).length
 );
 
+// Check if current user is a middleman (by email match)
+const isCurrentUserMiddleman = computed(() => {
+  if (!currentUser.value) return false;
+  return middlemen.value.some(m => m.email.toLowerCase() === currentUser.value?.email.toLowerCase());
+});
+
+// Check if current user is the middleman for a specific listing
+const isMiddlemanForListing = (listing: ListingResponse) => {
+  if (!currentUser.value || !listing.middleman) return false;
+  return listing.middleman.email.toLowerCase() === currentUser.value.email.toLowerCase();
+};
+
+// Check if seller contact should be shown (only to middleman assigned to listing)
+const shouldShowSellerContact = (listing: ListingResponse) => {
+  // If no middleman assigned, show seller contact to everyone (direct contact)
+  if (!listing.middleman || !listing.middlemanId) return true;
+  // If has middleman, only show seller contact to the assigned middleman
+  // This allows the middleman to contact the seller using the contact link/number
+  return isMiddlemanForListing(listing);
+};
+
+// Middlemen state
+type MiddlemanResponse = {
+  id: string;
+  name: string;
+  email: string;
+  link?: string;
+  createdAt: string;
+};
+
+const middlemen = ref<MiddlemanResponse[]>([]);
+const loadingMiddlemen = ref(false);
+const middlemenError = ref("");
+
+// Admin middlemen management state
+const newMiddleman = reactive({
+  name: "",
+  email: "",
+  link: "",
+});
+const addingMiddleman = ref(false);
+const middlemanError = ref("");
+
 // Close notifications dropdown when clicking outside
 const handleClickOutsideNotifications = (e: MouseEvent) => {
   const target = e.target as HTMLElement;
   if (!target.closest(".notification-container")) {
     showNotifications.value = false;
+  }
+};
+
+const loadMiddlemen = async () => {
+  loadingMiddlemen.value = true;
+  middlemenError.value = "";
+
+  try {
+    const data = await $fetch<MiddlemanResponse[]>("/api/middlemen");
+    middlemen.value = data;
+  } catch (err: any) {
+    const message =
+      err?.data?.message ||
+      err?.statusMessage ||
+      err?.message ||
+      "Failed to load middlemen.";
+    middlemenError.value = message;
+  } finally {
+    loadingMiddlemen.value = false;
+  }
+};
+
+const addMiddleman = async () => {
+  middlemanError.value = "";
+  
+  if (!newMiddleman.name || !newMiddleman.email) {
+    middlemanError.value = "Name and email are required.";
+    return;
+  }
+
+  const user = currentUser.value;
+  if (!user || !user.isAdmin) {
+    middlemanError.value = "Only admins can add middlemen.";
+    return;
+  }
+
+  addingMiddleman.value = true;
+
+  try {
+    await $fetch("/api/admin/middlemen", {
+      method: "POST",
+      body: {
+        userId: user.id,
+        name: newMiddleman.name,
+        email: newMiddleman.email,
+        link: newMiddleman.link || undefined,
+      },
+    });
+
+    // Reset form
+    newMiddleman.name = "";
+    newMiddleman.email = "";
+    newMiddleman.link = "";
+
+    // Reload middlemen
+    await loadMiddlemen();
+  } catch (err: any) {
+    const message =
+      err?.data?.message ||
+      err?.statusMessage ||
+      err?.message ||
+      "Failed to add middleman.";
+    middlemanError.value = message;
+  } finally {
+    addingMiddleman.value = false;
+  }
+};
+
+const deleteMiddleman = async (middlemanId: string) => {
+  const user = currentUser.value;
+  if (!user || !user.isAdmin) {
+    return;
+  }
+
+  if (!confirm("Are you sure you want to delete this middleman?")) {
+    return;
+  }
+
+  try {
+    await $fetch("/api/admin/middlemen/delete", {
+      method: "POST",
+      body: {
+        userId: user.id,
+        middlemanId,
+      },
+    });
+
+    // Reload middlemen
+    await loadMiddlemen();
+  } catch (err: any) {
+    const message =
+      err?.data?.message ||
+      err?.statusMessage ||
+      err?.message ||
+      "Failed to delete middleman.";
+    alert(message);
   }
 };
 
@@ -2380,6 +2826,9 @@ onMounted(() => {
       // Load listings on mount (marketplace is default view)
       loadListings();
       
+      // Load middlemen for form selector
+      loadMiddlemen();
+      
       // Load notifications if user is logged in
       if (currentUser.value) {
         loadNotifications();
@@ -2413,6 +2862,7 @@ const setTab = (tab: "post" | "listings" | "auth" | "admin") => {
     loadListings();
   }
   if (tab === "admin") {
+    loadMiddlemen();
     loadPendingListings();
     loadApprovedListings();
   }
@@ -2477,18 +2927,48 @@ const handleImagesChange = (event: Event) => {
   const files = target?.files;
   if (!files) return;
 
+  // Limit to 5 images total
+  const maxImages = 5;
+  const currentCount = imagePreviews.value.length;
+  const remainingSlots = maxImages - currentCount;
+
+  if (remainingSlots <= 0) {
+    alert(`Maximum ${maxImages} images allowed. Please remove some images first.`);
+    if (target) {
+      target.value = "";
+    }
+    return;
+  }
+
   imagePreviews.value.forEach((url) => URL.revokeObjectURL(url));
 
   const urls: string[] = [];
   const selectedFiles: File[] = [];
 
-  Array.from(files).forEach((file) => {
+  // Validate file size (5MB max per image)
+  const maxSizeMB = 5;
+  const maxSizeBytes = maxSizeMB * 1024 * 1024;
+
+  Array.from(files).slice(0, remainingSlots).forEach((file) => {
+    // Check file size
+    if (file.size > maxSizeBytes) {
+      alert(`Image "${file.name}" exceeds ${maxSizeMB}MB limit. Please choose a smaller image.`);
+      return;
+    }
+
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      alert(`File "${file.name}" is not an image. Please select image files only.`);
+      return;
+    }
+
     urls.push(URL.createObjectURL(file));
     selectedFiles.push(file);
   });
 
-  imagePreviews.value = urls;
-  imageFiles.value = selectedFiles;
+  // Combine with existing images (up to max)
+  imagePreviews.value = [...imagePreviews.value, ...urls].slice(0, maxImages);
+  imageFiles.value = [...imageFiles.value, ...selectedFiles].slice(0, maxImages);
 
   if (target) {
     target.value = "";
@@ -2624,6 +3104,9 @@ const onSubmit = async () => {
     formData.append("nickname", form.nickname);
     formData.append("server", form.server);
     formData.append("growthPower", form.growthPower);
+    if (form.middlemanId) {
+      formData.append("middlemanId", form.middlemanId);
+    }
     const classesString = selectedClass.value;
     formData.append("classes", classesString);
     formData.append("askingPrice", form.askingPrice);
@@ -2648,6 +3131,7 @@ const onSubmit = async () => {
     form.askingPrice = "";
     form.contactLink = "";
     form.contactNumber = "";
+    form.middlemanId = "";
     selectedClass.value = "";
     imagePreviews.value = [];
     imageFiles.value = [];

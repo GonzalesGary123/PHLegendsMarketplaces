@@ -31,6 +31,15 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  // Return listings with the specified status
-  return await getListingsFromDB(event, status as 'pending' | 'approved' | 'rejected' | 'sold');
+  try {
+    // Return listings with the specified status
+    return await getListingsFromDB(event, status as 'pending' | 'approved' | 'rejected' | 'sold');
+  } catch (err: any) {
+    console.error('Failed to fetch listings:', err);
+    // Don't expose internal error details
+    throw createError({
+      statusCode: 500,
+      statusMessage: "Failed to fetch listings. Please try again.",
+    });
+  }
 });

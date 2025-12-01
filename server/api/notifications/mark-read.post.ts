@@ -1,12 +1,22 @@
 import { createError, defineEventHandler, readBody } from "h3";
 import { markNotificationAsRead } from "../../utils/db";
+import { sanitizeString } from "../../utils/security";
 
 export default defineEventHandler(async (event) => {
   const body = await readBody<{ 
     notificationId?: string;
   }>(event);
 
-  const { notificationId } = body;
+  let notificationId: string;
+
+  try {
+    notificationId = sanitizeString(String(body.notificationId || ""), 50);
+  } catch (err: any) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "Invalid notification ID.",
+    });
+  }
 
   if (!notificationId) {
     throw createError({
@@ -22,9 +32,11 @@ export default defineEventHandler(async (event) => {
       notification,
     };
   } catch (err: any) {
+    console.error('Failed to mark notification as read:', err);
+    // Don't expose internal error details
     throw createError({
       statusCode: 500,
-      statusMessage: err?.message || "Failed to mark notification as read.",
+      statusMessage: "Failed to mark notification as read. Please try again.",
     });
   }
 });

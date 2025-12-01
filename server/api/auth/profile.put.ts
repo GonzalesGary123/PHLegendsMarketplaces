@@ -1,6 +1,7 @@
 import { createError, defineEventHandler, readBody } from "h3";
 import bcrypt from "bcrypt";
 import { getSupabaseServer } from "../../utils/supabase";
+import { sanitizeString } from "../../utils/security";
 
 interface ProfileUpdateBody {
   userId?: number | string;
@@ -12,10 +13,28 @@ interface ProfileUpdateBody {
 export default defineEventHandler(async (event) => {
   const body = await readBody<ProfileUpdateBody>(event);
 
-  const userId = body.userId;
-  const fullName = (body.fullName || "").trim();
-  const currentPassword = (body.currentPassword || "").trim();
-  const newPassword = (body.newPassword || "").trim();
+  let userId: string | number;
+  let fullName: string = "";
+  let currentPassword: string = "";
+  let newPassword: string = "";
+
+  try {
+    userId = sanitizeString(String(body.userId || ""), 50);
+    if (body.fullName) {
+      fullName = sanitizeString(body.fullName.trim(), 100);
+    }
+    if (body.currentPassword) {
+      currentPassword = sanitizeString(body.currentPassword.trim(), 128);
+    }
+    if (body.newPassword) {
+      newPassword = sanitizeString(body.newPassword.trim(), 128);
+    }
+  } catch (err: any) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: err.message || "Invalid input data.",
+    });
+  }
 
   if (!userId) {
     throw createError({
@@ -68,10 +87,17 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    if (newPassword.length < 6) {
+    if (newPassword.length < 8) {
       throw createError({
         statusCode: 400,
-        statusMessage: "New password must be at least 6 characters.",
+        statusMessage: "New password must be at least 8 characters.",
+      });
+    }
+
+    if (newPassword.length > 128) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: "Password is too long.",
       });
     }
 
@@ -97,10 +123,11 @@ export default defineEventHandler(async (event) => {
     .select("*");
 
   if (updateError || !updatedRows || updatedRows.length === 0) {
-    console.error("Profile update error:", updateError, updatedRows);
+    console.error("Profile update error:", updateError);
+    // Don't expose internal error details
     throw createError({
       statusCode: 500,
-      statusMessage: updateError?.message || "Failed to update profile.",
+      statusMessage: "Failed to update profile. Please try again.",
     });
   }
 

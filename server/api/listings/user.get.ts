@@ -1,9 +1,19 @@
 import { createError, defineEventHandler, getQuery } from "h3";
 import { getListingsFromDB } from "../../utils/db";
+import { sanitizeString } from "../../utils/security";
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event);
-  const userId = query.userId as string;
+  let userId: string;
+
+  try {
+    userId = sanitizeString(String(query.userId || ""), 50);
+  } catch (err: any) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "Invalid user ID.",
+    });
+  }
 
   if (!userId) {
     throw createError({
@@ -19,9 +29,11 @@ export default defineEventHandler(async (event) => {
     
     return userListings;
   } catch (err: any) {
+    console.error('Failed to fetch user listings:', err);
+    // Don't expose internal error details
     throw createError({
       statusCode: 500,
-      statusMessage: err?.message || "Failed to fetch user listings.",
+      statusMessage: "Failed to fetch user listings. Please try again.",
     });
   }
 });

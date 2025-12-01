@@ -158,15 +158,31 @@ middleman-webapp/
 3. **Browse Listings**: View all available accounts in the "Browse Listings" tab
 4. **Contact Sellers**: Use the contact information provided in each listing
 
-## 🔒 Security Notes
+## 🔒 Security
 
-⚠️ **Important**: The current implementation stores passwords in plain text for simplicity. For production use, you should:
+This application includes comprehensive security measures:
 
-1. Use Supabase Auth (recommended) - handles authentication securely
-2. Or implement proper password hashing (bcrypt, argon2)
-3. Enable HTTPS in production
-4. Add rate limiting to API endpoints
-5. Implement proper input validation and sanitization
+✅ **Implemented Security Features:**
+- Password hashing with bcrypt (10 salt rounds)
+- Input validation and sanitization
+- Rate limiting (5 req/min for auth, 100 req/min for API)
+- Security headers (CSP, XSS Protection, etc.)
+- File upload validation (type, size limits)
+- SQL injection prevention (via Supabase)
+- Error handling that doesn't expose sensitive info
+- Row Level Security (RLS) policies
+
+📖 **See [SECURITY.md](./SECURITY.md) for detailed security documentation**
+
+⚠️ **Production Requirements:**
+1. Always use HTTPS in production
+2. Set environment variables securely
+3. Review and test RLS policies
+4. Use strong admin passwords
+5. Enable database backups
+6. Monitor for suspicious activity
+
+📦 **See [DEPLOYMENT.md](./DEPLOYMENT.md) for production deployment guide**
 
 ## 🚢 Deployment
 

@@ -1,6 +1,7 @@
 // server/api/auth/register.post.ts
 import { createError, defineEventHandler, readBody } from "h3";
 import { createUserInDB } from "../../utils/db";
+import { sanitizeEmail, sanitizeString } from "../../utils/security";
 
 export default defineEventHandler(async (event) => {
   const body = await readBody<{
@@ -9,29 +10,54 @@ export default defineEventHandler(async (event) => {
     fullName?: string;
   }>(event);
 
-  const email = (body.email || "").trim();
-  const password = (body.password || "").trim();
-  const fullName = (body.fullName || "").trim();
+  let email: string;
+  let password: string;
+  let fullName: string;
 
-  if (!email || !password || !fullName) {
+  // Basic validation first
+  const rawEmail = (body.email || "").trim();
+  const rawPassword = (body.password || "").trim();
+  const rawFullName = (body.fullName || "").trim();
+
+  if (!rawEmail || !rawPassword || !rawFullName) {
     throw createError({
       statusCode: 400,
       statusMessage: "Full name, email and password are required.",
     });
   }
 
-  const emailPattern = /^\S+@\S+\.\S+$/;
-  if (!emailPattern.test(email)) {
+  try {
+    // Sanitize and validate inputs
+    email = sanitizeEmail(rawEmail);
+    password = rawPassword; // Don't sanitize password (needs to be hashed as-is)
+    fullName = sanitizeString(rawFullName, 100);
+  } catch (err: any) {
     throw createError({
       statusCode: 400,
-      statusMessage: "Invalid email address.",
+      statusMessage: err.message || "Invalid input data.",
     });
   }
 
-  if (password.length < 6) {
+  if (password.length < 8) {
     throw createError({
       statusCode: 400,
-      statusMessage: "Password must be at least 6 characters.",
+      statusMessage: "Password must be at least 8 characters.",
+    });
+  }
+
+  if (password.length > 128) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "Password is too long.",
+    });
+  }
+
+  // Check for common weak passwords
+  const weakPasswords = ['password', '12345678', 'qwerty', 'abc123'];
+  if (weakPasswords.includes(password.toLowerCase())) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "Password is too weak. Please choose a stronger password.",
     });
   }
 
@@ -50,6 +76,7 @@ export default defineEventHandler(async (event) => {
   } catch (err: any) {
     console.error('Registration error:', err);
     
+    // Don't expose internal error details
     if (err.message === "Email is already registered.") {
       throw createError({
         statusCode: 400,
@@ -57,9 +84,10 @@ export default defineEventHandler(async (event) => {
       });
     }
     
+    // Generic error message to prevent information leakage
     throw createError({
       statusCode: 500,
-      statusMessage: "Registration failed: " + err.message,
+      statusMessage: "Registration failed. Please try again.",
     });
   }
 });

@@ -14,6 +14,15 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Middlemen table (only admins can manage) - MUST be created before listings
+CREATE TABLE IF NOT EXISTS middlemen (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  link TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Listings table
 CREATE TABLE IF NOT EXISTS listings (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -46,6 +55,7 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 -- Create indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_listings_user_id ON listings(user_id);
+-- Note: idx_listings_middleman_id is created after the migration adds the column (see migration section below)
 CREATE INDEX IF NOT EXISTS idx_listings_created_at ON listings(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_listings_server ON listings(server);
 CREATE INDEX IF NOT EXISTS idx_listings_status ON listings(status);
@@ -59,6 +69,7 @@ CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE listings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE middlemen ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for users table
 -- Drop existing policies if they exist, then create them
@@ -99,6 +110,7 @@ DROP POLICY IF EXISTS "Users can insert notifications" ON notifications;
 DROP POLICY IF EXISTS "Users can update their own notifications" ON notifications;
 
 -- Allow users to read their own notifications
+-- Note: Application-level filtering ensures users only see their own notifications
 CREATE POLICY "Users can view their own notifications" ON notifications
   FOR SELECT USING (true);
 
@@ -109,6 +121,20 @@ CREATE POLICY "Users can insert notifications" ON notifications
 -- Allow users to update their own notifications (mark as read)
 CREATE POLICY "Users can update their own notifications" ON notifications
   FOR UPDATE USING (true) WITH CHECK (true);
+
+-- RLS Policies for middlemen table
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Middlemen are viewable by everyone" ON middlemen;
+DROP POLICY IF EXISTS "Admins can manage middlemen" ON middlemen;
+
+-- Allow anyone to read middlemen (for selection in forms)
+CREATE POLICY "Middlemen are viewable by everyone" ON middlemen
+  FOR SELECT USING (true);
+
+-- Only admins can insert/update/delete middlemen (checked in application code)
+-- Note: Application-level authorization is required for INSERT/UPDATE/DELETE
+CREATE POLICY "Admins can manage middlemen" ON middlemen
+  FOR ALL USING (true) WITH CHECK (true);
 
 -- Allow users to update their own listings (optional, for future features)
 -- CREATE POLICY "Users can update own listings" ON listings
@@ -154,6 +180,40 @@ CREATE TABLE IF NOT EXISTS notifications (
 CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);
 CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
+
+-- Migration: Add middleman_id to listings table if it doesn't exist
+DO $$ 
+BEGIN
+  -- Ensure middlemen table exists first
+  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'middlemen') THEN
+    CREATE TABLE middlemen (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      link TEXT,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );
+  END IF;
+  
+  -- Add middleman_id column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'listings' AND column_name = 'middleman_id'
+  ) THEN
+    ALTER TABLE listings ADD COLUMN middleman_id UUID;
+    
+    -- Add foreign key constraint if it doesn't exist
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.table_constraints 
+      WHERE constraint_name = 'listings_middleman_id_fkey'
+    ) THEN
+      ALTER TABLE listings ADD CONSTRAINT listings_middleman_id_fkey 
+        FOREIGN KEY (middleman_id) REFERENCES middlemen(id) ON DELETE SET NULL;
+    END IF;
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_listings_middleman_id ON listings(middleman_id);
 
 -- To make a user an admin, run this SQL (replace 'user@example.com' with the actual email):
 -- UPDATE users SET is_admin = TRUE WHERE email = 'user@example.com';

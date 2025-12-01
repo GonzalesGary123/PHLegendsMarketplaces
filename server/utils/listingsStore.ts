@@ -2,6 +2,13 @@
 export type Listing = {
   id: number | string;
   userId?: string;
+  middlemanId?: string;
+  middleman?: {
+    id: string;
+    name: string;
+    email: string;
+    link?: string;
+  };
   nickname: string;
   server: string;
   growthPower: string;
