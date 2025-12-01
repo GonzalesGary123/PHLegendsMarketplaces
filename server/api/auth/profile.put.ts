@@ -85,6 +85,7 @@ export default defineEventHandler(async (event) => {
       id: existing.id,
       email: existing.email,
       fullName: existing.full_name,
+      isAdmin: existing.is_admin || false,
       createdAt: existing.created_at,
     };
   }
@@ -109,6 +110,7 @@ export default defineEventHandler(async (event) => {
     id: updated.id,
     email: updated.email,
     fullName: updated.full_name,
+    isAdmin: updated.is_admin || false,
     createdAt: updated.created_at,
   };
 });

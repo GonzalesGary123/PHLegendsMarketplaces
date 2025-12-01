@@ -8,19 +8,27 @@
     ]"
   >
     <!-- Header -->
-    <header class="border-b transition-colors duration-300"
-      :class="theme === 'dark' ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'">
-      <div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+    <header class="border-b transition-colors duration-300 shadow-sm"
+      :class="theme === 'dark' ? 'border-slate-800 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-800' : 'border-slate-200 bg-gradient-to-r from-white via-slate-50 to-white'">
+      <div class="max-w-7xl mx-auto px-4 py-5 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between">
-          <div>
-            <h1 class="text-4xl font-bold transition-colors duration-300"
-              :class="theme === 'dark' ? 'text-slate-100' : 'text-slate-900'">
-             PH Legends Marketplace
-            </h1>
-            <p class="mt-1 text-sm font-medium transition-colors duration-300"
-              :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
-              Buy and sell game accounts safely
-            </p>
+          <div class="flex items-center gap-3">
+            <div class="flex items-center justify-center w-12 h-12 rounded-xl"
+              :class="theme === 'dark' ? 'bg-emerald-500/20 border border-emerald-500/30' : 'bg-emerald-100 border border-emerald-200'">
+              <span class="text-2xl">⚔️</span>
+            </div>
+            <div>
+              <h1 class="text-2xl sm:text-3xl font-bold bg-gradient-to-r bg-clip-text text-transparent transition-colors duration-300"
+                :class="theme === 'dark' 
+                  ? 'from-emerald-400 to-teal-400' 
+                  : 'from-emerald-600 to-teal-600'">
+                PH Legends Marketplace
+              </h1>
+              <p class="mt-0.5 text-xs sm:text-sm font-medium transition-colors duration-300"
+                :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+                Buy & Sell Game Accounts • Secure & Trusted
+              </p>
+            </div>
           </div>
           <div class="flex items-center gap-3">
           <button
@@ -36,6 +44,114 @@
               <span>{{ theme === 'dark' ? '🌙' : '☀️' }}</span>
               <span>{{ theme === 'dark' ? 'Dark' : 'Light' }}</span>
           </button>
+          
+          <!-- Notifications -->
+          <div v-if="currentUser" class="relative notification-container">
+            <button
+              type="button"
+              @click="toggleNotifications"
+              :class="[
+                'relative inline-flex items-center justify-center rounded-lg p-2 text-sm font-medium transition-colors duration-300',
+                theme === 'dark'
+                  ? 'bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700'
+                  : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-300',
+              ]"
+            >
+              <span class="text-xl">🔔</span>
+              <span
+                v-if="unreadNotificationsCount > 0"
+                class="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white"
+                :class="theme === 'dark' ? 'bg-red-500' : 'bg-red-600'"
+              >
+                {{ unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount }}
+              </span>
+            </button>
+            <div
+              v-if="showNotifications"
+              :class="[
+                'absolute right-0 mt-2 w-80 sm:w-96 rounded-lg border shadow-lg z-30 max-h-96 overflow-hidden',
+                theme === 'dark'
+                  ? 'border-slate-700 bg-slate-900 text-slate-100'
+                  : 'border-slate-200 bg-white text-slate-800',
+              ]"
+            >
+              <div class="flex items-center justify-between p-4 border-b"
+                :class="theme === 'dark' ? 'border-slate-700' : 'border-slate-200'">
+                <h3 class="text-sm font-bold">Notifications</h3>
+                <button
+                  v-if="unreadNotificationsCount > 0"
+                  type="button"
+                  @click="markAllNotificationsAsRead"
+                  class="text-xs text-emerald-500 hover:text-emerald-400"
+                >
+                  Mark all as read
+                </button>
+              </div>
+              <div class="max-h-80 overflow-y-auto">
+                <div v-if="loadingNotifications" class="p-6 text-center">
+                  <div class="inline-block animate-spin text-2xl mb-2">⏳</div>
+                  <p class="text-xs" :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+                    Loading...
+                  </p>
+                </div>
+                <div
+                  v-else-if="!notifications.length"
+                  class="p-8 text-center"
+                >
+                  <span class="text-3xl mb-2 block">📭</span>
+                  <p class="text-xs" :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+                    No notifications
+                  </p>
+                </div>
+                <div v-else>
+                  <button
+                    v-for="notif in notifications"
+                    :key="notif.id"
+                    type="button"
+                    @click="markNotificationAsRead(notif.id)"
+                    :class="[
+                      'w-full px-4 py-3 text-left border-b transition-colors duration-200',
+                      notif.isRead
+                        ? theme === 'dark'
+                          ? 'border-slate-800 bg-slate-900/50 hover:bg-slate-800'
+                          : 'border-slate-100 bg-slate-50/50 hover:bg-slate-100'
+                        : theme === 'dark'
+                          ? 'border-slate-700 bg-emerald-500/5 hover:bg-emerald-500/10'
+                          : 'border-slate-200 bg-emerald-50/50 hover:bg-emerald-100',
+                    ]"
+                  >
+                    <div class="flex items-start gap-2">
+                      <span class="text-lg">
+                        {{ notif.type === 'approved' ? '✅' : notif.type === 'rejected' ? '❌' : notif.type === 'sold' ? '💰' : '⏳' }}
+                      </span>
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between gap-2 mb-1">
+                          <p class="text-xs font-semibold truncate"
+                            :class="theme === 'dark' ? 'text-slate-200' : 'text-slate-900'">
+                            {{ notif.title }}
+                          </p>
+                          <span
+                            v-if="!notif.isRead"
+                            class="h-2 w-2 rounded-full flex-shrink-0"
+                            :class="theme === 'dark' ? 'bg-emerald-500' : 'bg-emerald-600'"
+                          ></span>
+                        </div>
+                        <p class="text-xs leading-relaxed"
+                          :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+                          {{ notif.message }}
+                        </p>
+                        <p class="text-xs mt-1"
+                          :class="theme === 'dark' ? 'text-slate-500' : 'text-slate-500'">
+                          {{ formatNotificationTime(notif.createdAt) }}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
             <div v-if="currentUser" class="relative">
               <button
                 type="button"
@@ -431,8 +547,12 @@
           <span class="text-3xl">✅</span>
           <h2 class="text-2xl font-bold"
             :class="theme === 'dark' ? 'text-emerald-300' : 'text-emerald-700'">
-            Listing Posted Successfully!
+            Listing Submitted Successfully!
           </h2>
+          <p class="text-sm mt-2"
+            :class="theme === 'dark' ? 'text-slate-300' : 'text-slate-700'">
+            Your listing is pending approval and will appear in the marketplace once approved by an admin. You'll receive a notification when your listing is reviewed!
+          </p>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
           <div class="flex items-center gap-2">
@@ -494,48 +614,141 @@
         v-if="activeTab === 'listings'"
         class="space-y-6"
       >
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
-          <div>
-            <h2 class="text-3xl font-bold mb-2"
-              :class="theme === 'dark' ? 'text-slate-100' : 'text-slate-900'">
-              Marketplace
-            </h2>
-            <p class="text-sm"
-              :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
-              Browse available Legends of Ymir accounts for sale
-            </p>
+        <!-- Hero Section with Stats -->
+        <div class="relative overflow-hidden rounded-2xl border p-8 sm:p-10 mb-8"
+          :class="theme === 'dark' 
+            ? 'border-slate-700 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900' 
+            : 'border-slate-200 bg-gradient-to-br from-white via-emerald-50/30 to-white'">
+          <div 
+            class="absolute inset-0 opacity-5"
+            :style="theme === 'dark' 
+              ? { backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.15) 1px, transparent 0)', backgroundSize: '20px 20px' }
+              : { backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(0,0,0,0.1) 1px, transparent 0)', backgroundSize: '20px 20px' }"
+          >
           </div>
-          <button
-            v-if="currentUser"
-            type="button"
-            @click="setTab('post')"
-            :class="[
-              'inline-flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold text-white transition-all duration-300 ease-in-out',
-              'bg-emerald-600 hover:bg-emerald-500 hover:scale-[1.02]',
-            ]"
-          >
-            Post New Listing
-          </button>
-          <button
-            v-else
-            type="button"
-            @click="setTab('auth')"
-            :class="[
-              'inline-flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold text-white transition-all duration-300 ease-in-out',
-              'bg-emerald-600 hover:bg-emerald-500 hover:scale-[1.02]',
-            ]"
-          >
-            Login to Sell
-          </button>
+          <div class="relative">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-6">
+              <div>
+                <h2 class="text-3xl sm:text-4xl font-bold mb-2 bg-gradient-to-r bg-clip-text text-transparent"
+                  :class="theme === 'dark' 
+                    ? 'from-emerald-400 to-teal-400' 
+                    : 'from-emerald-600 to-teal-600'">
+                  Marketplace
+                </h2>
+                <p class="text-base"
+                  :class="theme === 'dark' ? 'text-slate-300' : 'text-slate-700'">
+                  Browse premium Legends of Ymir accounts for sale
+                </p>
+              </div>
+              <button
+                v-if="currentUser"
+                type="button"
+                @click="setTab('post')"
+                :class="[
+                  'inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold text-white transition-all duration-300 ease-in-out shadow-lg',
+                  'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 hover:scale-[1.02] hover:shadow-xl',
+                ]"
+              >
+                <span>➕</span>
+                <span>Post New Listing</span>
+              </button>
+              <button
+                v-else
+                type="button"
+                @click="setTab('auth')"
+                :class="[
+                  'inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold text-white transition-all duration-300 ease-in-out shadow-lg',
+                  'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 hover:scale-[1.02] hover:shadow-xl',
+                ]"
+              >
+                <span>🔐</span>
+                <span>Login to Sell</span>
+              </button>
+            </div>
+            
+            <!-- Stats -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div class="rounded-xl p-4 border backdrop-blur-sm"
+                :class="theme === 'dark' 
+                  ? 'border-slate-700/50 bg-slate-800/50' 
+                  : 'border-slate-200/50 bg-white/70'">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-lg flex items-center justify-center text-xl"
+                    :class="theme === 'dark' 
+                      ? 'bg-emerald-500/20 text-emerald-400' 
+                      : 'bg-emerald-100 text-emerald-600'">
+                    📦
+                  </div>
+                  <div>
+                    <p class="text-2xl font-bold"
+                      :class="theme === 'dark' ? 'text-slate-100' : 'text-slate-900'">
+                      {{ listings.length }}
+                    </p>
+                    <p class="text-xs"
+                      :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+                      Total Listings
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="rounded-xl p-4 border backdrop-blur-sm"
+                :class="theme === 'dark' 
+                  ? 'border-slate-700/50 bg-slate-800/50' 
+                  : 'border-slate-200/50 bg-white/70'">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-lg flex items-center justify-center text-xl"
+                    :class="theme === 'dark' 
+                      ? 'bg-teal-500/20 text-teal-400' 
+                      : 'bg-teal-100 text-teal-600'">
+                    ✅
+                  </div>
+                  <div>
+                    <p class="text-2xl font-bold"
+                      :class="theme === 'dark' ? 'text-slate-100' : 'text-slate-900'">
+                      {{ listings.filter(l => l.status === 'approved').length }}
+                    </p>
+                    <p class="text-xs"
+                      :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+                      Available Now
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="rounded-xl p-4 border backdrop-blur-sm"
+                :class="theme === 'dark' 
+                  ? 'border-slate-700/50 bg-slate-800/50' 
+                  : 'border-slate-200/50 bg-white/70'">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-lg flex items-center justify-center text-xl"
+                    :class="theme === 'dark' 
+                      ? 'bg-amber-500/20 text-amber-400' 
+                      : 'bg-amber-100 text-amber-600'">
+                    👥
+                  </div>
+                  <div>
+                    <p class="text-2xl font-bold"
+                      :class="theme === 'dark' ? 'text-slate-100' : 'text-slate-900'">
+                      {{ currentUser ? 'Active' : 'Join' }}
+                    </p>
+                    <p class="text-xs"
+                      :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+                      Community
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
+        <!-- Filters Section -->
         <div
           v-if="!loadingListings && !listingsError && listings.length"
           :class="[
-            'mb-6 rounded-lg border p-4 sm:p-5 transition-all duration-300 ease-in-out',
+            'mb-6 rounded-xl border p-5 sm:p-6 transition-all duration-300 ease-in-out shadow-sm',
             theme === 'dark'
-              ? 'border-slate-700 bg-slate-900/60'
-              : 'border-slate-200 bg-white',
+              ? 'border-slate-700 bg-slate-800/60 backdrop-blur-sm'
+              : 'border-slate-200 bg-white shadow-md',
           ]"
         >
           <div class="flex items-center justify-between gap-3 mb-4">
@@ -558,7 +771,7 @@
               Reset
             </button>
           </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div class="space-y-2">
               <label
                 class="flex items-center gap-2 text-xs font-semibold"
@@ -687,6 +900,28 @@
                 />
               </div>
             </div>
+
+            <div class="space-y-2">
+              <label
+                class="flex items-center gap-2 text-xs font-semibold"
+                :class="theme === 'dark' ? 'text-slate-300' : 'text-slate-700'"
+              >
+                <span>Status</span>
+              </label>
+              <select
+                v-model="filters.soldStatus"
+                :class="[
+                  'w-full rounded-lg border px-3 py-2 text-xs sm:text-sm transition-all duration-300 ease-in-out',
+                  theme === 'dark'
+                    ? 'border-slate-600 bg-slate-800 text-slate-100 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
+                    : 'border-slate-300 bg-white text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20',
+                ]"
+              >
+                <option value="">All (Sold & Unsold)</option>
+                <option value="unsold">Available Only</option>
+                <option value="sold">Sold Only</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -747,105 +982,195 @@
           </p>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Listing Cards Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         <div
           v-for="item in filteredListings"
           :key="item.id"
           @click="openListingModal(item)"
           :class="[
-              'group rounded-lg border p-6 transition-all duration-300 ease-in-out hover:scale-[1.01] hover:shadow-lg cursor-pointer',
+              'group relative rounded-xl border overflow-hidden transition-all duration-300 ease-in-out',
+              item.status === 'sold' 
+                ? 'cursor-not-allowed opacity-75'
+                : 'cursor-pointer hover:scale-[1.02] hover:shadow-2xl',
             theme === 'dark'
-                ? 'border-slate-700 bg-slate-800/70 hover:border-emerald-500/50 '
-                : 'border-slate-200 bg-white hover:border-emerald-500/50 ',
+                ? item.status === 'sold'
+                  ? 'border-slate-700/50 bg-slate-800/40'
+                  : 'border-slate-700/50 bg-slate-800/60 hover:border-emerald-500/50 hover:shadow-emerald-500/10'
+                : item.status === 'sold'
+                  ? 'border-slate-200 bg-slate-50'
+                  : 'border-slate-200 bg-white hover:border-emerald-500/50 hover:shadow-xl',
             ]"
           >
-            <!-- Header with price badge -->
-            <div class="flex items-start justify-between gap-3 mb-4">
-              <div class="flex-1">
-                <h3 class="text-xl font-bold mb-1"
-                  :class="theme === 'dark' ? 'text-slate-100' : 'text-slate-900'">
-                {{ item.nickname }}
-                </h3>
-                <div class="flex items-center gap-2 text-xs"
-                  :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
-                  <span>🌐 {{ item.server }}</span>
-                  <span>•</span>
-                  <span>⚡ GP: {{ item.growthPower }}</span>
-            </div>
-              </div>
-              <div class="rounded-lg px-4 py-2 font-bold text-lg transition-all duration-300 ease-in-out"
+            <!-- Status Badge -->
+            <div v-if="item.status === 'sold'" class="absolute top-3 right-3 z-10">
+              <span class="text-xs font-bold px-3 py-1.5 rounded-full shadow-lg"
                 :class="theme === 'dark' 
-                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                  : 'bg-emerald-100 text-emerald-700 border border-emerald-200'">
-              ${{ item.askingPrice }}
-              </div>
-          </div>
-
-            <!-- Class badges -->
-            <div v-if="item.classesList.length" class="flex flex-wrap gap-2 mb-4">
-              <span
-                v-for="className in item.classesList"
-                :key="className"
-                :class="[
-                  'inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold',
-                  theme === 'dark'
-                    ? 'bg-slate-700/50 text-slate-300 border border-slate-600'
-                    : 'bg-slate-100 text-slate-700 border border-slate-300',
-                ]"
-              >
-                <span>{{ getClassIcon(className) }}</span>
-                <span>{{ className }}</span>
+                  ? 'bg-red-600/90 text-white border border-red-500'
+                  : 'bg-red-600 text-white border border-red-700'">
+                SOLD
               </span>
-          </div>
-
-            <!-- Images preview -->
-          <div
-            v-if="item.images.length"
-              class="mb-4 grid grid-cols-3 gap-2"
-          >
-            <div
-                v-for="(src, index) in item.images.slice(0, 3)"
-              :key="index"
-                :class="[
-                  'overflow-hidden rounded-lg border transition-all duration-300 ease-in-out',
-                  theme === 'dark'
-                    ? 'border-slate-700 bg-slate-900/50'
-                    : 'border-slate-300 bg-slate-100',
-                ]"
-              >
-                <img :src="src" alt="Listing image" class="h-20 w-full object-cover" />
-              </div>
             </div>
 
-            <!-- Contact info -->
-            <div class="space-y-3 pt-4 border-t"
-              :class="theme === 'dark' ? 'border-slate-700' : 'border-slate-200'">
-              <div class="flex items-center gap-2 text-xs"
-                :class="theme === 'dark' ? 'text-slate-500' : 'text-slate-500'">
-                <span>🕒</span>
-                <span>Posted {{ new Date(item.createdAt).toLocaleDateString() }}</span>
+            <!-- Image Gallery -->
+            <div
+              v-if="item.images.length"
+              class="relative h-48 overflow-hidden bg-gradient-to-br"
+              :class="theme === 'dark' 
+                ? 'from-slate-800 to-slate-900' 
+                : 'from-slate-100 to-slate-200'">
+              <img 
+                :src="item.images[0]" 
+                :alt="item.nickname"
+                class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+              />
+              <div v-if="item.images.length > 1" class="absolute bottom-2 right-2">
+                <span class="px-2 py-1 text-xs font-semibold rounded backdrop-blur-sm"
+                  :class="theme === 'dark' 
+                    ? 'bg-black/50 text-white' 
+                    : 'bg-white/80 text-slate-900'">
+                  +{{ item.images.length - 1 }} more
+                </span>
               </div>
-              <div class="flex flex-col gap-2">
+            </div>
+            <div
+              v-else
+              class="relative h-48 flex items-center justify-center bg-gradient-to-br"
+              :class="theme === 'dark' 
+                ? 'from-slate-800 to-slate-900' 
+                : 'from-slate-100 to-slate-200'">
+              <span class="text-5xl opacity-30">⚔️</span>
+            </div>
+
+            <!-- Card Content -->
+            <div class="p-5">
+              <!-- Header -->
+              <div class="mb-3">
+                <h3 class="text-lg font-bold mb-2 line-clamp-1"
+                  :class="theme === 'dark' ? 'text-slate-100' : 'text-slate-900'">
+                  {{ item.nickname }}
+                </h3>
+                <div class="flex items-center gap-2 text-xs mb-2"
+                  :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+                  <span class="inline-flex items-center gap-1">
+                    <span>🌐</span>
+                    <span>{{ item.server }}</span>
+                  </span>
+                  <span>•</span>
+                  <span class="inline-flex items-center gap-1">
+                    <span>⚡</span>
+                    <span>{{ item.growthPower }} GP</span>
+                  </span>
+                </div>
+              </div>
+
+              <!-- Class badges -->
+              <div v-if="item.classesList.length" class="flex flex-wrap gap-1.5 mb-4">
+                <span
+                  v-for="className in item.classesList.slice(0, 3)"
+                  :key="className"
+                  :class="[
+                    'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium',
+                    theme === 'dark'
+                      ? 'bg-slate-700/60 text-slate-300 border border-slate-600/50'
+                      : 'bg-slate-100 text-slate-700 border border-slate-300',
+                  ]"
+                >
+                  <span>{{ getClassIcon(className) }}</span>
+                  <span>{{ className }}</span>
+                </span>
+                <span
+                  v-if="item.classesList.length > 3"
+                  :class="[
+                    'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium',
+                    theme === 'dark'
+                      ? 'bg-slate-700/60 text-slate-400 border border-slate-600/50'
+                      : 'bg-slate-100 text-slate-600 border border-slate-300',
+                  ]"
+                >
+                  +{{ item.classesList.length - 3 }}
+                </span>
+              </div>
+
+              <!-- Price -->
+              <div class="mb-4 pt-4 border-t"
+                :class="theme === 'dark' ? 'border-slate-700/50' : 'border-slate-200'">
+                <div class="flex items-baseline justify-between">
+                  <span class="text-xs font-medium"
+                    :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+                    Price
+                  </span>
+                  <div class="flex items-baseline gap-1">
+                    <span 
+                      v-if="item.status === 'sold'"
+                      class="text-base font-bold line-through"
+                      :class="theme === 'dark' ? 'text-slate-500' : 'text-slate-400'">
+                      ${{ item.askingPrice }}
+                    </span>
+                    <span 
+                      v-else
+                      class="text-2xl font-bold"
+                      :class="theme === 'dark' 
+                        ? 'bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent'
+                        : 'bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent'">
+                      ${{ item.askingPrice }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Action Button -->
+              <div class="space-y-2">
+                <div
+                  v-if="item.status === 'sold'"
+                  :class="[
+                    'w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold cursor-not-allowed',
+                    theme === 'dark'
+                      ? 'bg-slate-700/50 text-slate-500 border border-slate-700'
+                      : 'bg-slate-200 text-slate-500 border border-slate-300',
+                  ]"
+                  @click.stop
+                >
+                  <span>❌</span>
+                  <span>Sold Out</span>
+                </div>
                 <a
-                  v-if="item.contactLink"
+                  v-else-if="item.contactLink"
                   :href="item.contactLink"
                   target="_blank"
                   rel="noopener noreferrer"
                   @click.stop
                   :class="[
-                    'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-300 ease-in-out',
-                    theme === 'dark'
-                      ? 'bg-emerald-600 text-white hover:bg-emerald-500'
-                      : 'bg-emerald-600 text-white hover:bg-emerald-500',
+                    'w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white transition-all duration-300 ease-in-out shadow-md',
+                    'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 hover:shadow-lg hover:scale-[1.02]',
                   ]"
                 >
                   <span>💬</span>
                   <span>Contact Seller</span>
                 </a>
-                <div class="flex items-center gap-2 text-xs px-2"
-                  :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+                <button
+                  v-else
+                  type="button"
+                  @click.stop="openListingModal(item)"
+                  :class="[
+                    'w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white transition-all duration-300 ease-in-out shadow-md',
+                    'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 hover:shadow-lg hover:scale-[1.02]',
+                  ]"
+                >
+                  <span>👁️</span>
+                  <span>View Details</span>
+                </button>
+                <div 
+                  v-if="item.status !== 'sold' && item.contactNumber"
+                  class="flex items-center justify-center gap-2 text-xs pt-1"
+                  :class="theme === 'dark' ? 'text-slate-500' : 'text-slate-600'">
                   <span>📞</span>
                   <span>{{ item.contactNumber }}</span>
+                </div>
+                <div class="flex items-center justify-center gap-2 text-xs pt-1"
+                  :class="theme === 'dark' ? 'text-slate-500' : 'text-slate-600'">
+                  <span>🕒</span>
+                  <span>{{ new Date(item.createdAt).toLocaleDateString() }}</span>
                 </div>
               </div>
             </div>
@@ -871,9 +1196,19 @@
         >
           <div class="flex items-start justify-between gap-4 mb-4">
             <div>
-              <h3 class="text-2xl font-bold mb-1">
-                {{ selectedListing.nickname }}
-              </h3>
+              <div class="flex items-center gap-2 mb-1">
+                <h3 class="text-2xl font-bold">
+                  {{ selectedListing.nickname }}
+                </h3>
+                <span
+                  v-if="selectedListing.status === 'sold'"
+                  class="text-xs font-semibold px-3 py-1 rounded"
+                  :class="theme === 'dark' 
+                    ? 'bg-red-500/20 text-red-300 border border-red-500/30'
+                    : 'bg-red-100 text-red-700 border border-red-200'">
+                  SOLD
+                </span>
+              </div>
               <p
                 class="text-xs"
                 :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'"
@@ -914,7 +1249,15 @@
             </div>
             <div class="space-y-1">
               <div class="font-semibold">Asking Price</div>
-              <div class="text-emerald-400 font-bold text-lg">
+              <div 
+                :class="[
+                  'font-bold text-lg',
+                  selectedListing.status === 'sold'
+                    ? theme === 'dark' 
+                      ? 'text-slate-500 line-through'
+                      : 'text-slate-400 line-through'
+                    : 'text-emerald-400'
+                ]">
                 ${{ selectedListing.askingPrice }}
               </div>
             </div>
@@ -961,14 +1304,23 @@
             class="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
           >
             <div
+              v-if="selectedListing.status !== 'sold'"
               class="flex items-center gap-2 text-sm"
               :class="theme === 'dark' ? 'text-slate-300' : 'text-slate-700'"
             >
               <span>📞</span>
               <span>{{ selectedListing.contactNumber }}</span>
             </div>
+            <div
+              v-else
+              class="flex items-center gap-2 text-sm"
+              :class="theme === 'dark' ? 'text-red-400' : 'text-red-600'"
+            >
+              <span>❌</span>
+              <span>This account has been sold</span>
+            </div>
             <a
-              v-if="selectedListing.contactLink"
+              v-if="selectedListing.status !== 'sold' && selectedListing.contactLink"
               :href="selectedListing.contactLink"
               target="_blank"
               rel="noopener noreferrer"
@@ -980,6 +1332,18 @@
               <span>💬</span>
               <span>Contact Seller</span>
             </a>
+            <div
+              v-else-if="selectedListing.status === 'sold'"
+              :class="[
+                'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold',
+                theme === 'dark'
+                  ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                  : 'bg-slate-300 text-slate-500 cursor-not-allowed',
+              ]"
+            >
+              <span>❌</span>
+              <span>Sold</span>
+            </div>
           </div>
         </div>
       </div>
@@ -1175,6 +1539,151 @@
               </button>
             </div>
           </form>
+
+          <!-- User's Listings Section -->
+          <div class="mt-8">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-xl font-bold"
+                :class="theme === 'dark' ? 'text-slate-100' : 'text-slate-900'">
+                My Listings
+              </h3>
+              <button
+                type="button"
+                @click="loadUserListings"
+                :class="[
+                  'text-xs font-medium px-3 py-1.5 rounded-lg transition-colors',
+                  theme === 'dark'
+                    ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200',
+                ]"
+              >
+                🔄 Refresh
+              </button>
+            </div>
+
+            <div v-if="loadingUserListings" class="text-center py-12">
+              <div class="inline-block animate-spin text-4xl mb-4">⏳</div>
+              <p class="text-sm"
+                :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+                Loading your listings...
+              </p>
+            </div>
+
+            <div v-else-if="userListingsError"
+              :class="[
+                'rounded-lg border p-4 text-center',
+                theme === 'dark'
+                  ? 'border-red-500/50 bg-red-500/10 text-red-300'
+                  : 'border-red-300 bg-red-50 text-red-700',
+              ]">
+              <p class="text-sm font-medium">⚠️ {{ userListingsError }}</p>
+            </div>
+
+            <div v-else-if="!userListings.length"
+              :class="[
+                'rounded-lg border p-12 text-center',
+                theme === 'dark'
+                  ? 'border-slate-700 bg-slate-800/50'
+                  : 'border-slate-300 bg-white',
+              ]">
+              <span class="text-5xl mb-4 block">📭</span>
+              <p class="text-sm font-medium mb-4"
+                :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+                You haven't posted any listings yet.
+              </p>
+              <button
+                type="button"
+                @click="setTab('post')"
+                :class="[
+                  'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-all duration-300',
+                  'bg-emerald-600 hover:bg-emerald-500',
+                ]">
+                <span>➕</span>
+                <span>Post Your First Listing</span>
+              </button>
+            </div>
+
+            <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div
+                v-for="item in userListings"
+                :key="item.id"
+                @click="openListingModal(item)"
+                :class="[
+                  'group relative rounded-xl border overflow-hidden transition-all duration-300 ease-in-out cursor-pointer hover:scale-[1.02] hover:shadow-xl',
+                  theme === 'dark'
+                    ? 'border-slate-700/50 bg-slate-800/60 hover:border-emerald-500/50'
+                    : 'border-slate-200 bg-white hover:border-emerald-500/50',
+                ]"
+              >
+                <!-- Status Badge -->
+                <div class="absolute top-3 right-3 z-10">
+                  <span 
+                    class="text-xs font-bold px-3 py-1.5 rounded-full shadow-lg"
+                    :class="{
+                      'bg-amber-600 text-white': item.status === 'pending',
+                      'bg-emerald-600 text-white': item.status === 'approved',
+                      'bg-red-600 text-white': item.status === 'rejected' || item.status === 'sold',
+                    }">
+                    {{ item.status === 'pending' ? 'PENDING' : item.status === 'approved' ? 'APPROVED' : item.status === 'rejected' ? 'REJECTED' : 'SOLD' }}
+                  </span>
+                </div>
+
+                <!-- Image -->
+                <div
+                  v-if="item.images.length"
+                  class="relative h-40 overflow-hidden bg-gradient-to-br"
+                  :class="theme === 'dark' 
+                    ? 'from-slate-800 to-slate-900' 
+                    : 'from-slate-100 to-slate-200'">
+                  <img 
+                    :src="item.images[0]" 
+                    :alt="item.nickname"
+                    class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                  />
+                </div>
+                <div
+                  v-else
+                  class="relative h-40 flex items-center justify-center bg-gradient-to-br"
+                  :class="theme === 'dark' 
+                    ? 'from-slate-800 to-slate-900' 
+                    : 'from-slate-100 to-slate-200'">
+                  <span class="text-4xl opacity-30">⚔️</span>
+                </div>
+
+                <!-- Card Content -->
+                <div class="p-4">
+                  <h4 class="text-lg font-bold mb-2 line-clamp-1"
+                    :class="theme === 'dark' ? 'text-slate-100' : 'text-slate-900'">
+                    {{ item.nickname }}
+                  </h4>
+                  <div class="flex items-center gap-2 text-xs mb-3"
+                    :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+                    <span>🌐 {{ item.server }}</span>
+                    <span>•</span>
+                    <span>⚡ {{ item.growthPower }} GP</span>
+                  </div>
+                  <div class="flex items-baseline justify-between pt-3 border-t"
+                    :class="theme === 'dark' ? 'border-slate-700' : 'border-slate-200'">
+                    <span class="text-xs font-medium"
+                      :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+                      Price
+                    </span>
+                    <span 
+                      class="text-xl font-bold"
+                      :class="theme === 'dark' 
+                        ? 'bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent'
+                        : 'bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent'">
+                      ${{ item.askingPrice }}
+                    </span>
+                  </div>
+                  <div class="mt-2 text-xs"
+                    :class="theme === 'dark' ? 'text-slate-500' : 'text-slate-500'">
+                    🕒 {{ new Date(item.createdAt).toLocaleDateString() }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div v-else class="flex gap-3 justify-center mb-8">
@@ -1381,15 +1890,340 @@
           </button>
         </form>
       </section>
+
+      <!-- Admin Panel -->
+      <section
+        v-if="activeTab === 'admin'"
+        class="space-y-6"
+      >
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
+          <div>
+            <h2 class="text-3xl font-bold mb-2"
+              :class="theme === 'dark' ? 'text-slate-100' : 'text-slate-900'">
+              ⚙️ Admin Panel
+            </h2>
+            <p class="text-sm"
+              :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+              Review and approve pending listings, mark approved listings as sold
+            </p>
+          </div>
+        </div>
+
+        <div
+          v-if="!currentUser?.isAdmin"
+          :class="[
+            'rounded-lg border p-12 text-center transition-all duration-300 ease-in-out',
+            theme === 'dark'
+              ? 'border-red-500/50 bg-red-500/10 text-red-300'
+              : 'border-red-300 bg-red-50 text-red-700',
+          ]"
+        >
+          <div class="text-5xl mb-4">🔒</div>
+          <p class="text-sm font-medium">
+            Admin access required. You don't have permission to view this page.
+          </p>
+        </div>
+
+        <div v-if="loadingPendingListings" class="text-center py-12">
+          <div class="inline-block animate-spin text-4xl mb-4">⏳</div>
+          <p class="text-sm"
+            :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+            Loading pending listings...
+          </p>
+        </div>
+
+        <div v-if="pendingListingsError"
+          :class="[
+            'rounded-lg border p-6 text-center transition-all duration-300 ease-in-out',
+            theme === 'dark'
+              ? 'border-red-500/50 bg-red-500/10 text-red-300'
+              : 'border-red-300 bg-red-50 text-red-700',
+          ]">
+          <p class="text-sm font-medium">⚠️ {{ pendingListingsError }}</p>
+        </div>
+
+        <div
+          v-if="currentUser?.isAdmin && !loadingPendingListings && !pendingListingsError && !pendingListings.length"
+          :class="[
+            'rounded-lg border p-12 text-center transition-all duration-300 ease-in-out',
+            theme === 'dark'
+              ? 'border-slate-700 bg-slate-800/50'
+              : 'border-slate-300 bg-white',
+          ]"
+        >
+          <span class="text-5xl mb-4 block">✅</span>
+          <p class="text-sm font-medium"
+            :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+            No pending listings. All caught up!
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div
+            v-for="item in pendingListings"
+            :key="item.id"
+            :class="[
+              'group rounded-lg border p-6 transition-all duration-300 ease-in-out',
+              theme === 'dark'
+                ? 'border-amber-700 bg-slate-800/70'
+                : 'border-amber-300 bg-white',
+            ]"
+          >
+            <div class="flex items-start justify-between gap-3 mb-4">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-xs font-semibold px-2 py-1 rounded"
+                    :class="theme === 'dark' 
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                      : 'bg-amber-100 text-amber-700 border border-amber-200'">
+                    PENDING
+                  </span>
+                </div>
+                <h3 class="text-xl font-bold mb-1"
+                  :class="theme === 'dark' ? 'text-slate-100' : 'text-slate-900'">
+                  {{ item.nickname }}
+                </h3>
+                <div class="flex items-center gap-2 text-xs"
+                  :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+                  <span>🌐 {{ item.server }}</span>
+                  <span>•</span>
+                  <span>⚡ GP: {{ item.growthPower }}</span>
+                </div>
+              </div>
+              <div class="rounded-lg px-4 py-2 font-bold text-lg transition-all duration-300 ease-in-out"
+                :class="theme === 'dark' 
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                  : 'bg-emerald-100 text-emerald-700 border border-emerald-200'">
+                ${{ item.askingPrice }}
+              </div>
+            </div>
+
+            <div v-if="item.classesList.length" class="flex flex-wrap gap-2 mb-4">
+              <span
+                v-for="className in item.classesList"
+                :key="className"
+                :class="[
+                  'inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold',
+                  theme === 'dark'
+                    ? 'bg-slate-700/50 text-slate-300 border border-slate-600'
+                    : 'bg-slate-100 text-slate-700 border border-slate-300',
+                ]"
+              >
+                <span>{{ getClassIcon(className) }}</span>
+                <span>{{ className }}</span>
+              </span>
+            </div>
+
+            <div
+              v-if="item.images.length"
+              class="mb-4 grid grid-cols-3 gap-2"
+            >
+              <div
+                v-for="(src, index) in item.images.slice(0, 3)"
+                :key="index"
+                :class="[
+                  'overflow-hidden rounded-lg border transition-all duration-300 ease-in-out',
+                  theme === 'dark'
+                    ? 'border-slate-700 bg-slate-900/50'
+                    : 'border-slate-300 bg-slate-100',
+                ]"
+              >
+                <img :src="src" alt="Listing image" class="h-20 w-full object-cover" />
+              </div>
+            </div>
+
+            <div class="space-y-3 pt-4 border-t"
+              :class="theme === 'dark' ? 'border-slate-700' : 'border-slate-200'">
+              <div class="flex items-center gap-2 text-xs"
+                :class="theme === 'dark' ? 'text-slate-500' : 'text-slate-500'">
+                <span>🕒</span>
+                <span>Posted {{ new Date(item.createdAt).toLocaleDateString() }}</span>
+              </div>
+              <div class="flex items-center gap-2 text-xs px-2"
+                :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+                <span>📞</span>
+                <span>{{ item.contactNumber }}</span>
+              </div>
+              <div class="flex gap-2">
+                <button
+                  type="button"
+                  @click="approveListing(item.id)"
+                  :class="[
+                    'flex-1 inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-all duration-300 ease-in-out',
+                    'bg-emerald-600 hover:bg-emerald-500',
+                  ]"
+                >
+                  <span>✅</span>
+                  <span>Approve</span>
+                </button>
+                <button
+                  type="button"
+                  @click="rejectListing(item.id)"
+                  :class="[
+                    'flex-1 inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-all duration-300 ease-in-out',
+                    'bg-red-600 hover:bg-red-500',
+                  ]"
+                >
+                  <span>❌</span>
+                  <span>Reject</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Approved Listings Section -->
+        <div v-if="currentUser?.isAdmin" class="mt-12">
+          <h3 class="text-2xl font-bold mb-4"
+            :class="theme === 'dark' ? 'text-slate-100' : 'text-slate-900'">
+            Approved Listings
+          </h3>
+          
+          <div v-if="loadingApprovedListings" class="text-center py-8">
+            <div class="inline-block animate-spin text-3xl mb-2">⏳</div>
+            <p class="text-xs"
+              :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+              Loading approved listings...
+            </p>
+          </div>
+
+          <div v-if="approvedListingsError"
+            :class="[
+              'rounded-lg border p-4 text-center transition-all duration-300 ease-in-out mb-6',
+              theme === 'dark'
+                ? 'border-red-500/50 bg-red-500/10 text-red-300'
+                : 'border-red-300 bg-red-50 text-red-700',
+            ]">
+            <p class="text-xs font-medium">⚠️ {{ approvedListingsError }}</p>
+          </div>
+
+          <div
+            v-if="!loadingApprovedListings && !approvedListingsError && !approvedListings.length"
+            :class="[
+              'rounded-lg border p-8 text-center transition-all duration-300 ease-in-out',
+              theme === 'dark'
+                ? 'border-slate-700 bg-slate-800/50'
+                : 'border-slate-300 bg-white',
+            ]"
+          >
+            <span class="text-4xl mb-3 block">📋</span>
+            <p class="text-xs font-medium"
+              :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+              No approved listings available.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div
+              v-for="item in approvedListings"
+              :key="item.id"
+              :class="[
+                'group rounded-lg border p-6 transition-all duration-300 ease-in-out',
+                theme === 'dark'
+                  ? 'border-emerald-700 bg-slate-800/70'
+                  : 'border-emerald-300 bg-white',
+              ]"
+            >
+              <div class="flex items-start justify-between gap-3 mb-4">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-2">
+                    <span class="text-xs font-semibold px-2 py-1 rounded"
+                      :class="theme === 'dark' 
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                        : 'bg-emerald-100 text-emerald-700 border border-emerald-200'">
+                      APPROVED
+                    </span>
+                  </div>
+                  <h3 class="text-xl font-bold mb-1"
+                    :class="theme === 'dark' ? 'text-slate-100' : 'text-slate-900'">
+                    {{ item.nickname }}
+                  </h3>
+                  <div class="flex items-center gap-2 text-xs"
+                    :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+                    <span>🌐 {{ item.server }}</span>
+                    <span>•</span>
+                    <span>⚡ GP: {{ item.growthPower }}</span>
+                  </div>
+                </div>
+                <div class="rounded-lg px-4 py-2 font-bold text-lg transition-all duration-300 ease-in-out"
+                  :class="theme === 'dark' 
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                    : 'bg-emerald-100 text-emerald-700 border border-emerald-200'">
+                  ${{ item.askingPrice }}
+                </div>
+              </div>
+
+              <div v-if="item.classesList.length" class="flex flex-wrap gap-2 mb-4">
+                <span
+                  v-for="className in item.classesList"
+                  :key="className"
+                  :class="[
+                    'inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold',
+                    theme === 'dark'
+                      ? 'bg-slate-700/50 text-slate-300 border border-slate-600'
+                      : 'bg-slate-100 text-slate-700 border border-slate-300',
+                  ]"
+                >
+                  <span>{{ getClassIcon(className) }}</span>
+                  <span>{{ className }}</span>
+                </span>
+              </div>
+
+              <div
+                v-if="item.images.length"
+                class="mb-4 grid grid-cols-3 gap-2"
+              >
+                <div
+                  v-for="(src, index) in item.images.slice(0, 3)"
+                  :key="index"
+                  :class="[
+                    'overflow-hidden rounded-lg border transition-all duration-300 ease-in-out',
+                    theme === 'dark'
+                      ? 'border-slate-700 bg-slate-900/50'
+                      : 'border-slate-300 bg-slate-100',
+                  ]"
+                >
+                  <img :src="src" alt="Listing image" class="h-20 w-full object-cover" />
+                </div>
+              </div>
+
+              <div class="space-y-3 pt-4 border-t"
+                :class="theme === 'dark' ? 'border-slate-700' : 'border-slate-200'">
+                <div class="flex items-center gap-2 text-xs"
+                  :class="theme === 'dark' ? 'text-slate-500' : 'text-slate-500'">
+                  <span>🕒</span>
+                  <span>Posted {{ new Date(item.createdAt).toLocaleDateString() }}</span>
+                </div>
+                <div class="flex items-center gap-2 text-xs px-2"
+                  :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+                  <span>📞</span>
+                  <span>{{ item.contactNumber }}</span>
+                </div>
+                <button
+                  type="button"
+                  @click="markAsSold(item.id)"
+                  :class="[
+                    'w-full inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-all duration-300 ease-in-out',
+                    'bg-blue-600 hover:bg-blue-500',
+                  ]"
+                >
+                  <span>💰</span>
+                  <span>Mark as Sold</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, onMounted, watch, computed } from "vue";
+import { reactive, ref, onMounted, watch, computed, onUnmounted } from "vue";
 
 type ListingResponse = {
-  id: number;
+  id: number | string;
   createdAt: string;
   nickname: string;
   server: string;
@@ -1399,6 +2233,9 @@ type ListingResponse = {
   contactLink: string;
   contactNumber: string;
   images: string[];
+  status?: 'pending' | 'approved' | 'rejected' | 'sold';
+  approvedBy?: string;
+  approvedAt?: string;
 };
 
 const phonePattern = /^[0-9+()\-\s]{7,20}$/;
@@ -1426,10 +2263,10 @@ const selectedClass = ref<string>("");
 
 const submittedListing = ref<ListingResponse | null>(null);
 
-const activeTab = ref<"post" | "listings" | "auth">("listings");
+const activeTab = ref<"post" | "listings" | "auth" | "admin">("listings");
 
 const currentUser = ref<
-  { id: number | string; email: string; fullName?: string } | null
+  { id: number | string; email: string; fullName?: string; isAdmin?: boolean } | null
 >(null);
 
 const listings = ref<ListingResponse[]>([]);
@@ -1443,6 +2280,7 @@ const filters = reactive({
   maxPrice: "",
   minGrowthPower: "",
   maxGrowthPower: "",
+  soldStatus: "", // empty = all, "sold" = sold only, "unsold" = unsold only
 });
 
 const showListingModal = ref(false);
@@ -1471,6 +2309,46 @@ const profileSaving = ref(false);
 const profileError = ref("");
 const profileMessage = ref("");
 
+// User's listings state
+const userListings = ref<ListingResponse[]>([]);
+const loadingUserListings = ref(false);
+const userListingsError = ref("");
+
+// Admin panel state
+const pendingListings = ref<ListingResponse[]>([]);
+const approvedListings = ref<ListingResponse[]>([]);
+const loadingPendingListings = ref(false);
+const loadingApprovedListings = ref(false);
+const pendingListingsError = ref("");
+const approvedListingsError = ref("");
+
+// Notifications state
+type NotificationResponse = {
+  id: string;
+  userId: string;
+  listingId?: string;
+  type: 'pending_review' | 'approved' | 'rejected' | 'sold';
+  title: string;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+};
+
+const notifications = ref<NotificationResponse[]>([]);
+const loadingNotifications = ref(false);
+const showNotifications = ref(false);
+const unreadNotificationsCount = computed(() => 
+  notifications.value.filter(n => !n.isRead).length
+);
+
+// Close notifications dropdown when clicking outside
+const handleClickOutsideNotifications = (e: MouseEvent) => {
+  const target = e.target as HTMLElement;
+  if (!target.closest(".notification-container")) {
+    showNotifications.value = false;
+  }
+};
+
 onMounted(() => {
   if (typeof window !== "undefined") {
     try {
@@ -1491,6 +2369,7 @@ onMounted(() => {
               id: parsed.id,
               email: parsed.email,
               fullName: parsed.fullName,
+              isAdmin: parsed.isAdmin || false,
             };
           }
         } catch {
@@ -1500,6 +2379,14 @@ onMounted(() => {
 
       // Load listings on mount (marketplace is default view)
       loadListings();
+      
+      // Load notifications if user is logged in
+      if (currentUser.value) {
+        loadNotifications();
+      }
+      
+      // Close notifications dropdown when clicking outside
+      window.addEventListener("click", handleClickOutsideNotifications);
     } catch {
       // ignore
     }
@@ -1520,10 +2407,14 @@ watch(
   { immediate: false }
 );
 
-const setTab = (tab: "post" | "listings" | "auth") => {
+const setTab = (tab: "post" | "listings" | "auth" | "admin") => {
   activeTab.value = tab;
   if (tab === "listings") {
     loadListings();
+  }
+  if (tab === "admin") {
+    loadPendingListings();
+    loadApprovedListings();
   }
   if (tab === "auth" && currentUser.value) {
     profileForm.fullName = currentUser.value.fullName || "";
@@ -1531,6 +2422,7 @@ const setTab = (tab: "post" | "listings" | "auth") => {
     profileForm.newPassword = "";
     profileError.value = "";
     profileMessage.value = "";
+    loadUserListings();
   }
 };
 
@@ -1539,6 +2431,8 @@ const showUserMenu = ref(false);
 const logout = () => {
   currentUser.value = null;
   authMode.value = "login";
+  notifications.value = [];
+  showNotifications.value = false;
   if (typeof window !== "undefined") {
     try {
       window.localStorage.removeItem(CURRENT_USER_STORAGE_KEY);
@@ -1650,7 +2544,12 @@ const filteredListings = computed(() => {
       (!maxGrowthPower ||
         (!Number.isNaN(growthPower) && growthPower <= maxGrowthPower));
 
-    return serverMatch && classMatch && priceMatch && growthPowerMatch;
+    const soldStatusMatch =
+      !filters.soldStatus ||
+      (filters.soldStatus === "sold" && item.status === "sold") ||
+      (filters.soldStatus === "unsold" && item.status !== "sold");
+
+    return serverMatch && classMatch && priceMatch && growthPowerMatch && soldStatusMatch;
   });
 });
 
@@ -1661,6 +2560,7 @@ const resetFilters = () => {
   filters.maxPrice = "";
   filters.minGrowthPower = "";
   filters.maxGrowthPower = "";
+  filters.soldStatus = "";
 };
 
 const loadListings = async () => {
@@ -1752,6 +2652,14 @@ const onSubmit = async () => {
     imagePreviews.value = [];
     imageFiles.value = [];
     
+    // Reload notifications to show the pending review notification
+    loadNotifications();
+    
+    // Reload user's listings if on profile page
+    if (activeTab.value === "auth") {
+      loadUserListings();
+    }
+    
     // Redirect to marketplace after 2 seconds
     setTimeout(() => {
       activeTab.value = "listings";
@@ -1786,6 +2694,7 @@ const onRegister = async () => {
         id: number | string;
         email: string;
         fullName: string;
+        isAdmin?: boolean;
         createdAt: string;
       };
     }>("/api/auth/register", {
@@ -1803,6 +2712,7 @@ const onRegister = async () => {
       id: newUser.id,
       email: newUser.email,
       fullName: newUser.fullName,
+      isAdmin: newUser.isAdmin || false,
     };
     if (typeof window !== "undefined") {
       try {
@@ -1812,6 +2722,7 @@ const onRegister = async () => {
             id: newUser.id,
             email: newUser.email,
             fullName: newUser.fullName,
+            isAdmin: newUser.isAdmin || false,
           })
         );
       } catch {
@@ -1826,6 +2737,7 @@ const onRegister = async () => {
     setTimeout(() => {
       activeTab.value = "listings";
       loadListings();
+      loadNotifications();
       authSuccess.value = "";
     }, 1500);
   } catch (err: any) {
@@ -1852,6 +2764,7 @@ const onLogin = async () => {
       id: number | string;
       email: string;
       fullName: string;
+      isAdmin?: boolean;
       createdAt: string;
     }>("/api/auth/login", {
       method: "POST",
@@ -1865,6 +2778,7 @@ const onLogin = async () => {
       id: user.id,
       email: user.email,
       fullName: user.fullName,
+      isAdmin: user.isAdmin || false,
     };
     if (typeof window !== "undefined") {
       try {
@@ -1874,6 +2788,7 @@ const onLogin = async () => {
             id: user.id,
             email: user.email,
             fullName: user.fullName,
+            isAdmin: user.isAdmin || false,
           })
         );
       } catch {
@@ -1883,6 +2798,7 @@ const onLogin = async () => {
     // After login, go to marketplace to see listings
     activeTab.value = "listings";
     loadListings();
+    loadNotifications();
   } catch (err: any) {
     const message =
       err?.data?.message ||
@@ -1919,6 +2835,7 @@ const onUpdateProfile = async () => {
       id: number | string;
       email: string;
       fullName: string;
+      isAdmin?: boolean;
       createdAt: string;
     }>("/api/auth/profile", {
       method: "PUT",
@@ -1934,6 +2851,7 @@ const onUpdateProfile = async () => {
       id: updated.id,
       email: updated.email,
       fullName: updated.fullName,
+      isAdmin: updated.isAdmin || false,
     };
 
     if (typeof window !== "undefined") {
@@ -1944,6 +2862,7 @@ const onUpdateProfile = async () => {
             id: updated.id,
             email: updated.email,
             fullName: updated.fullName,
+            isAdmin: updated.isAdmin || false,
           })
         );
       } catch {
@@ -1965,5 +2884,275 @@ const onUpdateProfile = async () => {
     profileSaving.value = false;
   }
 };
+
+// User's listings functions
+const loadUserListings = async () => {
+  if (!currentUser.value) {
+    userListings.value = [];
+    return;
+  }
+
+  loadingUserListings.value = true;
+  userListingsError.value = "";
+
+  try {
+    const data = await $fetch<ListingResponse[]>("/api/listings/user", {
+      query: {
+        userId: currentUser.value.id,
+      },
+    });
+    userListings.value = data;
+  } catch (err: any) {
+    const message =
+      err?.data?.message ||
+      err?.statusMessage ||
+      err?.message ||
+      "Failed to load your listings.";
+    userListingsError.value = message;
+  } finally {
+    loadingUserListings.value = false;
+  }
+};
+
+// Admin functions
+const loadPendingListings = async () => {
+  if (!currentUser.value?.isAdmin) {
+    pendingListingsError.value = "Admin access required.";
+    return;
+  }
+
+  loadingPendingListings.value = true;
+  pendingListingsError.value = "";
+
+  try {
+    const data = await $fetch<ListingResponse[]>("/api/admin/pending-listings", {
+      query: {
+        userId: currentUser.value.id,
+      },
+    });
+    pendingListings.value = data;
+  } catch (err: any) {
+    const message =
+      err?.data?.message ||
+      err?.statusMessage ||
+      err?.message ||
+      "Failed to load pending listings.";
+    pendingListingsError.value = message;
+  } finally {
+    loadingPendingListings.value = false;
+  }
+};
+
+const approveListing = async (listingId: string | number) => {
+  if (!currentUser.value?.isAdmin) {
+    return;
+  }
+
+  try {
+    await $fetch("/api/admin/approve", {
+      method: "POST",
+      body: {
+        listingId,
+        userId: currentUser.value.id,
+      },
+    });
+    
+                // Remove from pending list and reload
+    pendingListings.value = pendingListings.value.filter((l) => l.id !== listingId);
+    
+    // Reload approved listings since this one is now approved
+    loadApprovedListings();
+    
+    // Refresh notifications for the listing owner (notification was created on backend)
+  } catch (err: any) {
+    const message =
+      err?.data?.message ||
+      err?.statusMessage ||
+      err?.message ||
+      "Failed to approve listing.";
+    alert(message);
+  }
+};
+
+const rejectListing = async (listingId: string | number) => {
+  if (!currentUser.value?.isAdmin) {
+    return;
+  }
+
+  if (!confirm("Are you sure you want to reject this listing?")) {
+    return;
+  }
+
+  try {
+    await $fetch("/api/admin/reject", {
+      method: "POST",
+      body: {
+        listingId,
+        userId: currentUser.value.id,
+      },
+    });
+    
+    // Remove from pending list
+    pendingListings.value = pendingListings.value.filter((l) => l.id !== listingId);
+  } catch (err: any) {
+    const message =
+      err?.data?.message ||
+      err?.statusMessage ||
+      err?.message ||
+      "Failed to reject listing.";
+    alert(message);
+  }
+};
+
+const loadApprovedListings = async () => {
+  if (!currentUser.value?.isAdmin) {
+    approvedListingsError.value = "Admin access required.";
+    return;
+  }
+
+  loadingApprovedListings.value = true;
+  approvedListingsError.value = "";
+
+  try {
+    const data = await $fetch<ListingResponse[]>("/api/admin/pending-listings", {
+      query: {
+        userId: currentUser.value.id,
+        status: 'approved',
+      },
+    });
+    approvedListings.value = data.filter((l) => l.status === 'approved');
+  } catch (err: any) {
+    const message =
+      err?.data?.message ||
+      err?.statusMessage ||
+      err?.message ||
+      "Failed to load approved listings.";
+    approvedListingsError.value = message;
+  } finally {
+    loadingApprovedListings.value = false;
+  }
+};
+
+const markAsSold = async (listingId: string | number) => {
+  if (!currentUser.value?.isAdmin) {
+    return;
+  }
+
+  if (!confirm("Are you sure you want to mark this listing as sold?")) {
+    return;
+  }
+
+  try {
+    await $fetch("/api/admin/mark-sold", {
+      method: "POST",
+      body: {
+        listingId,
+        userId: currentUser.value.id,
+      },
+    });
+    
+    // Remove from approved list and reload marketplace
+    approvedListings.value = approvedListings.value.filter((l) => l.id !== listingId);
+    loadListings(); // Refresh marketplace to remove sold listing
+  } catch (err: any) {
+    const message =
+      err?.data?.message ||
+      err?.statusMessage ||
+      err?.message ||
+      "Failed to mark listing as sold.";
+    alert(message);
+  }
+};
+
+// Notification functions
+const loadNotifications = async () => {
+  if (!currentUser.value) {
+    return;
+  }
+
+  loadingNotifications.value = true;
+
+  try {
+    const data = await $fetch<NotificationResponse[]>("/api/notifications", {
+      query: {
+        userId: currentUser.value.id,
+      },
+    });
+    notifications.value = data;
+  } catch (err: any) {
+    console.error("Failed to load notifications:", err);
+  } finally {
+    loadingNotifications.value = false;
+  }
+};
+
+const markNotificationAsRead = async (notificationId: string) => {
+  try {
+    await $fetch("/api/notifications/mark-read", {
+      method: "POST",
+      body: {
+        notificationId,
+      },
+    });
+    
+    // Update local state
+    const notif = notifications.value.find(n => n.id === notificationId);
+    if (notif) {
+      notif.isRead = true;
+    }
+  } catch (err: any) {
+    console.error("Failed to mark notification as read:", err);
+  }
+};
+
+const markAllNotificationsAsRead = async () => {
+  if (!currentUser.value) {
+    return;
+  }
+
+  try {
+    await $fetch("/api/notifications/mark-all-read", {
+      method: "POST",
+      body: {
+        userId: currentUser.value.id,
+      },
+    });
+    
+    // Update local state
+    notifications.value.forEach(n => {
+      n.isRead = true;
+    });
+  } catch (err: any) {
+    console.error("Failed to mark all notifications as read:", err);
+  }
+};
+
+const formatNotificationTime = (dateString: string): string => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString();
+};
+
+const toggleNotifications = () => {
+  showNotifications.value = !showNotifications.value;
+  if (showNotifications.value) {
+    loadNotifications();
+  }
+};
+
+onUnmounted(() => {
+  if (typeof window !== "undefined") {
+    window.removeEventListener("click", handleClickOutsideNotifications);
+  }
+});
 
 </script>

@@ -1,5 +1,5 @@
 import { createError, defineEventHandler, readMultipartFormData } from "h3";
-import { addListingToDB } from "../utils/db";
+import { addListingToDB, createNotification } from "../utils/db";
 
 export default defineEventHandler(async (event) => {
   const form = await readMultipartFormData(event);
@@ -108,6 +108,21 @@ export default defineEventHandler(async (event) => {
     contactNumber,
     images,
   });
+
+  // Create notification for the user that their listing is pending review
+  try {
+    await createNotification(
+      event,
+      userId,
+      listing.id,
+      'pending_review',
+      'Listing Submitted for Review',
+      `Your listing for "${nickname}" has been submitted and is pending admin review. You'll be notified once it's approved.`
+    );
+  } catch (notifError) {
+    console.error('Failed to create notification:', notifError);
+    // Don't fail the listing creation if notification fails
+  }
 
   return listing;
 });

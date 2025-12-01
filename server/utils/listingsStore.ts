@@ -1,6 +1,6 @@
 // server/utils/listingsStore.ts
 export type Listing = {
-  id: number;
+  id: number | string;
   userId?: string;
   nickname: string;
   server: string;
@@ -10,6 +10,9 @@ export type Listing = {
   contactLink: string;
   contactNumber: string;
   images: string[];
+  status?: 'pending' | 'approved' | 'rejected' | 'sold';
+  approvedBy?: string;
+  approvedAt?: string;
   createdAt: string;
 };
 
