@@ -4,6 +4,7 @@ import type { Listing } from "./listingsStore";
 import type { User } from "./usersStore";
 import type { Notification } from "./notificationsStore";
 import type { Middleman } from "./middlemenStore";
+import type { Feedback } from "./feedbackStore";
 
 export async function addListingToDB(
   event: H3Event,
@@ -492,6 +493,108 @@ export async function markAllNotificationsAsRead(
     console.error('❌ Error marking all notifications as read:', error);
     throw new Error(`Failed to mark all notifications as read: ${error.message}`);
   }
+}
+
+// Feedback functions
+export async function addFeedbackToDB(
+  event: H3Event,
+  input: { userId: string; type: 'middleman' | 'app'; middlemanId?: string; rating?: number; comment: string }
+): Promise<Feedback> {
+  const { getSupabaseServer } = await import('./supabase')
+  const supabase = await getSupabaseServer(event)
+
+  const payload: any = {
+    user_id: input.userId,
+    type: input.type,
+    comment: input.comment,
+  };
+
+  if (input.type === 'middleman') {
+    payload.middleman_id = input.middlemanId || null;
+    payload.rating = input.rating ?? null;
+  } else {
+    payload.middleman_id = null;
+    payload.rating = input.rating ?? null;
+  }
+
+  const { data, error } = await supabase
+    .from("feedback")
+    .insert(payload)
+    .select()
+    .single();
+
+  if (error || !data) {
+    console.error('❌ Error adding feedback:', error);
+    throw new Error(`Failed to add feedback: ${error?.message || 'Unknown error'}`);
+  }
+
+  return {
+    id: data.id,
+    userId: data.user_id,
+    middlemanId: data.middleman_id || undefined,
+    type: data.type,
+    rating: data.rating || undefined,
+    comment: data.comment,
+    createdAt: data.created_at,
+  };
+}
+
+export async function getFeedbackForMiddleman(
+  event: H3Event,
+  middlemanId: string
+): Promise<Feedback[]> {
+  const { getSupabaseServer } = await import('./supabase')
+  const supabase = await getSupabaseServer(event)
+
+  const { data, error } = await supabase
+    .from("feedback")
+    .select("*")
+    .eq("type", "middleman")
+    .eq("middleman_id", middlemanId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error('❌ Error fetching feedback for middleman:', error);
+    throw new Error(`Failed to fetch feedback: ${error.message}`);
+  }
+
+  return (data || []).map((item: any) => ({
+    id: item.id,
+    userId: item.user_id,
+    middlemanId: item.middleman_id || undefined,
+    type: item.type,
+    rating: item.rating || undefined,
+    comment: item.comment,
+    createdAt: item.created_at,
+  }));
+}
+
+export async function getAppFeedback(
+  event: H3Event
+): Promise<Feedback[]> {
+  const { getSupabaseServer } = await import('./supabase')
+  const supabase = await getSupabaseServer(event)
+
+  const { data, error } = await supabase
+    .from("feedback")
+    .select("*")
+    .eq("type", "app")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error('❌ Error fetching app feedback:', error);
+    throw new Error(`Failed to fetch app feedback: ${error.message}`);
+  }
+
+  return (data || []).map((item: any) => ({
+    id: item.id,
+    userId: item.user_id,
+    middlemanId: item.middleman_id || undefined,
+    type: item.type,
+    rating: item.rating || undefined,
+    comment: item.comment,
+    createdAt: item.created_at,
+  }));
 }
 
 // Middlemen functions

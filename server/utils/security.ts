@@ -147,7 +147,15 @@ export function setSecurityHeaders(event: H3Event): void {
     if (process.env.NODE_ENV === 'production') {
       event.node.res.setHeader(
         'Content-Security-Policy',
-        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:;"
+        [
+          "default-src 'self'",
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+          "style-src 'self' 'unsafe-inline'",
+          // Allow blob: for local file previews and data: for base64 images
+          "img-src 'self' data: https: blob:",
+          "font-src 'self' data:",
+          "connect-src 'self' https:",
+        ].join('; ') + ';'
       );
     }
 

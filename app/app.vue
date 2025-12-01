@@ -397,7 +397,7 @@
               :class="theme === 'dark' ? 'text-slate-200' : 'text-slate-700'">
               <span>Contact Link</span>
             </label>
-            <input
+            <input  
               v-model="form.contactLink"
               type="url"
               placeholder="Social media link"
@@ -1726,7 +1726,6 @@
               <div
                 v-for="item in userListings"
                 :key="item.id"
-                @click="openListingModal(item)"
                 :class="[
                   'group relative rounded-xl border overflow-hidden transition-all duration-300 ease-in-out cursor-pointer hover:scale-[1.02] hover:shadow-xl',
                   theme === 'dark'
@@ -1770,7 +1769,7 @@
                 </div>
 
                 <!-- Card Content -->
-                <div class="p-4">
+                <div class="p-4" @click="openListingModal(item)">
                   <h4 class="text-lg font-bold mb-2 line-clamp-1"
                     :class="theme === 'dark' ? 'text-slate-100' : 'text-slate-900'">
                     {{ item.nickname }}
@@ -1798,6 +1797,33 @@
                   <div class="mt-2 text-xs"
                     :class="theme === 'dark' ? 'text-slate-500' : 'text-slate-500'">
                     🕒 {{ new Date(item.createdAt).toLocaleDateString() }}
+                  </div>
+                </div>
+
+                <!-- Owner actions -->
+                <div class="px-4 pb-4 pt-2 border-t"
+                  :class="theme === 'dark' ? 'border-slate-700/70 bg-slate-900/40' : 'border-slate-200 bg-slate-50'">
+                  <div class="flex items-center justify-between gap-3">
+                    <button
+                      v-if="item.status !== 'sold'"
+                      type="button"
+                      @click.stop="markOwnedListingAsSold(String(item.id))"
+                      :class="[
+                        'inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-white transition-all duration-300 ease-in-out',
+                        'bg-blue-600 hover:bg-blue-500'
+                      ]"
+                    >
+                      <span>💰</span>
+                      <span>Mark as Sold</span>
+                    </button>
+                    <span
+                      v-else
+                      class="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold"
+                      :class="theme === 'dark' ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-600'"
+                    >
+                      <span>✅</span>
+                      <span>Marked as Sold</span>
+                    </span>
                   </div>
                 </div>
               </div>
@@ -3164,6 +3190,34 @@ const onSubmit = async () => {
     error.value = message;
   } finally {
     submitting.value = false;
+  }
+};
+
+const markOwnedListingAsSold = async (listingId: string) => {
+  const user = currentUser.value;
+  if (!user) {
+    error.value = "You must be logged in to manage your listings.";
+    return;
+  }
+
+  try {
+    await $fetch("/api/listings/mark-sold", {
+      method: "POST",
+      body: {
+        userId: user.id,
+        listingId,
+      },
+    });
+
+    // Refresh user listings and main listings
+    await Promise.all([loadUserListings(), loadListings()]);
+  } catch (err: any) {
+    const message =
+      err?.data?.message ||
+      err?.statusMessage ||
+      err?.message ||
+      "Failed to mark listing as sold.";
+    userListingsError.value = message;
   }
 };
 

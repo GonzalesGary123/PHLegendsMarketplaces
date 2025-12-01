@@ -66,11 +66,28 @@ CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);
 CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
 
+-- Feedback table (for middleman vouches and app feedback)
+CREATE TABLE IF NOT EXISTS feedback (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  middleman_id UUID REFERENCES middlemen(id) ON DELETE SET NULL,
+  -- 'middleman' = vouch for middleman, 'app' = general app feedback
+  type TEXT NOT NULL CHECK (type IN ('middleman', 'app')),
+  rating INTEGER CHECK (rating BETWEEN 1 AND 5),
+  comment TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_feedback_type ON feedback(type);
+CREATE INDEX IF NOT EXISTS idx_feedback_middleman_id ON feedback(middleman_id);
+CREATE INDEX IF NOT EXISTS idx_feedback_user_id ON feedback(user_id);
+
 -- Enable Row Level Security (RLS)
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE listings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE middlemen ENABLE ROW LEVEL SECURITY;
+ALTER TABLE feedback ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for users table
 -- Drop existing policies if they exist, then create them
@@ -136,6 +153,18 @@ CREATE POLICY "Middlemen are viewable by everyone" ON middlemen
 -- Note: Application-level authorization is required for INSERT/UPDATE/DELETE
 CREATE POLICY "Admins can manage middlemen" ON middlemen
   FOR ALL USING (true) WITH CHECK (true);
+
+-- RLS Policies for feedback table
+DROP POLICY IF EXISTS "Feedback viewable by everyone" ON feedback;
+DROP POLICY IF EXISTS "Users can insert feedback" ON feedback;
+
+-- Anyone can read feedback (for transparency / vouches)
+CREATE POLICY "Feedback viewable by everyone" ON feedback
+  FOR SELECT USING (true);
+
+-- Anyone can insert feedback (auth handled in application)
+CREATE POLICY "Users can insert feedback" ON feedback
+  FOR INSERT WITH CHECK (true);
 
 -- Allow users to update their own listings (optional, for future features)
 -- CREATE POLICY "Users can update own listings" ON listings
