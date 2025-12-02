@@ -436,6 +436,8 @@
             </div>
           </div>
           
+          
+
         </div>
       </section>
       <template v-else>
@@ -1569,7 +1571,7 @@
 
         <!-- Filters Section -->
         <div
-          v-if="!loadingListings && !listingsError && listings.length"
+          v-if="!loadingListings && !listingsError"
           :class="[
             'mb-6 rounded-xl border p-5 sm:p-6 transition-all duration-300 ease-in-out shadow-sm',
             theme === 'dark'
@@ -1631,6 +1633,25 @@
                 <option value="ymir">Legends of Ymir</option>
                 <option value="rok">Rise of Kingdoms</option>
               </select>
+            </div>
+            <div class="space-y-2">
+              <label
+                class="flex items-center gap-2 text-xs font-semibold"
+                :class="theme === 'dark' ? 'text-slate-300' : 'text-slate-700'"
+              >
+                <span>Code</span>
+              </label>
+              <input
+                v-model="filters.codeId"
+                type="text"
+                placeholder="Enter listing ID"
+                :class="[
+                  'w-full rounded-lg border px-3 py-2 text-xs sm:text-sm transition-all duration-300 ease-in-out',
+                  theme === 'dark'
+                    ? 'border-slate-600 bg-slate-800 text-slate-100 placeholder:text-slate-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
+                    : 'border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20',
+                ]"
+              />
             </div>
             <div class="space-y-2" v-if="filters.game !== 'rok'">
               <label
@@ -2228,6 +2249,23 @@
                 </div>
               </div>
 
+              <div class="mb-3 flex items-center gap-2 text-xs"
+                :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+                <span>🆔</span>
+                <span>Code ID: {{ item.id }}</span>
+                <button
+                  type="button"
+                  @click.stop="copyCodeId(item.id)"
+                  :class="[
+                    'rounded px-2 py-1 font-semibold',
+                    theme === 'dark' ? 'bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700' : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-300',
+                  ]"
+                >
+                  Copy
+                </button>
+                <span v-if="copiedId === String(item.id)" :class="theme === 'dark' ? 'text-emerald-300' : 'text-emerald-700'">Copied</span>
+              </div>
+
               <!-- Action Button -->
               <div class="space-y-2">
                 <div
@@ -2566,6 +2604,23 @@
                 </span>
               </div>
             </div>
+          </div>
+
+          <div class="mt-3 flex items-center gap-2 text-sm"
+            :class="theme === 'dark' ? 'text-slate-300' : 'text-slate-700'">
+            <span>🆔</span>
+            <span>Code ID: {{ selectedListing.id }}</span>
+            <button
+              type="button"
+              @click="copyCodeId(selectedListing.id)"
+              :class="[
+                'rounded px-2 py-1 text-xs font-semibold',
+                theme === 'dark' ? 'bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700' : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-300',
+              ]"
+            >
+              Copy
+            </button>
+            <span v-if="copiedId === String(selectedListing.id)" :class="theme === 'dark' ? 'text-emerald-300' : 'text-emerald-700'">Copied</span>
           </div>
 
           <div
@@ -4397,6 +4452,7 @@ const listingsError = ref("");
 
 const filters = reactive({
   game: "ymir",
+  codeId: "",
   server: "",
   className: "",
   minPrice: "",
@@ -4432,6 +4488,19 @@ const selectedListing = ref<ListingResponse | null>(null);
 const previewImage = ref<string | null>(null);
 const selectedDefaultImage = computed(() => (selectedListing.value?.game === 'rok' ? rokDefaultImg : ymirDefaultImg));
 const submittedDefaultImage = computed(() => (submittedListing.value?.game === 'rok' ? rokDefaultImg : ymirDefaultImg));
+
+const copiedId = ref<string | null>(null);
+const copyCodeId = async (id: number | string) => {
+  try {
+    if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(String(id));
+      copiedId.value = String(id);
+      setTimeout(() => {
+        if (copiedId.value === String(id)) copiedId.value = null;
+      }, 1500);
+    }
+  } catch {}
+};
 
 const authMode = ref<"login" | "register">("login");
 const authError = ref("");
@@ -5149,6 +5218,7 @@ const toBool = (val: string | undefined): boolean | null => {
 
 const filteredListings = computed(() => {
   return listings.value.filter((item) => {
+    const idMatch = !filters.codeId || String(item.id).toLowerCase().includes(String(filters.codeId).trim().toLowerCase());
     const gameMatch = !filters.game || item.game === filters.game;
     const serverMatch =
       filters.game === 'rok' ||
@@ -5242,12 +5312,13 @@ const filteredListings = computed(() => {
       (filters.soldStatus === "sold" && item.status === "sold") ||
       (filters.soldStatus === "unsold" && item.status !== "sold");
 
-    return gameMatch && serverMatch && classMatch && priceMatch && growthPowerMatch && soldStatusMatch && rokMatch;
+    return idMatch && gameMatch && serverMatch && classMatch && priceMatch && growthPowerMatch && soldStatusMatch && rokMatch;
   });
 });
 
 const resetFilters = () => {
   filters.game = "ymir";
+  filters.codeId = "";
   filters.server = "";
   filters.className = "";
   filters.minPrice = "";
