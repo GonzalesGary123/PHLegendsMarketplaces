@@ -148,9 +148,11 @@
                       </div>
                     </div>
                   </button>
-        </div>
+              </div>
           </div>
         </div>
+    </div>
+
             <div v-if="currentUser" class="relative">
               <button
                 type="button"
@@ -200,7 +202,6 @@
           </div>
         </div>
       </div>
-    </div>
     </header>
 
     <main class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
@@ -5594,11 +5595,12 @@ const onRegister = async () => {
     loginForm.email = registerForm.email;
     loginForm.password = registerForm.password;
     
-    // After registration, go to marketplace
     setTimeout(() => {
+      showLandingPage.value = false;
       activeTab.value = "listings";
       loadListings();
       loadNotifications();
+      navigateTo('/');
       authSuccess.value = "";
     }, 1500);
   } catch (err: any) {
@@ -5656,10 +5658,11 @@ const onLogin = async () => {
         // ignore
       }
     }
-    // After login, go to marketplace to see listings
+    showLandingPage.value = false;
     activeTab.value = "listings";
     loadListings();
     loadNotifications();
+    navigateTo('/');
   } catch (err: any) {
     const message =
       err?.data?.message ||
