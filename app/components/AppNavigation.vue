@@ -2,6 +2,7 @@
   <nav class="mb-8">
     <div class="flex flex-wrap items-center gap-3">
       <button
+        v-if="currentUser"
         type="button"
         @click="$emit('tab-change', 'post')"
         :class="[
@@ -32,6 +33,23 @@
         ]"
       >
         <span>Marketplace</span>
+      </button>
+      <button
+        v-if="currentUser"
+        type="button"
+        @click="$emit('tab-change', 'feedback')"
+        :class="[
+          'group relative rounded-lg border px-6 py-2.5 text-sm font-medium transition-all duration-300 ease-in-out',
+          activeTab === 'feedback'
+            ? theme === 'dark'
+              ? 'border-emerald-500 bg-emerald-500/10 text-emerald-300'
+              : 'border-emerald-500 bg-emerald-50 text-emerald-700'
+            : theme === 'dark'
+              ? 'border-slate-700 bg-slate-800/50 text-slate-300 hover:border-emerald-500/50 hover:bg-slate-700/50'
+              : 'border-slate-300 bg-white text-slate-700 hover:border-emerald-500/50 hover:bg-slate-50',
+        ]"
+      >
+        <span>Feedback</span>
       </button>
       <button
         v-if="currentUser?.isAdmin"
@@ -73,13 +91,13 @@
 <script setup lang="ts">
 
 defineProps<{
-  activeTab: 'post' | 'listings' | 'auth' | 'admin';
+  activeTab: 'post' | 'listings' | 'feedback' | 'auth' | 'admin';
   theme: 'dark' | 'light';
   currentUser: { id: number | string; email: string; fullName?: string; isAdmin?: boolean } | null;
 }>();
 
 defineEmits<{
-  'tab-change': [tab: 'post' | 'listings' | 'auth' | 'admin'];
+  'tab-change': [tab: 'post' | 'listings' | 'feedback' | 'auth' | 'admin'];
 }>();
 </script>
 

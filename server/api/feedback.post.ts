@@ -64,7 +64,10 @@ export default defineEventHandler(async (event) => {
     }
     throw createError({
       statusCode: 500,
-      statusMessage: "Failed to submit feedback.",
+      statusMessage:
+        process.env.NODE_ENV === "production"
+          ? "Failed to submit feedback."
+          : `Failed to submit feedback: ${err?.message || "Unknown error"}`,
     });
   }
 });

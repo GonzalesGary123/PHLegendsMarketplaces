@@ -126,27 +126,69 @@ export async function addListingToDB(
   };
 }
 
-export async function getListingsFromDB(event: H3Event, status?: 'pending' | 'approved' | 'rejected' | 'sold'): Promise<Listing[]> {
+export async function getListingsFromDB(
+  event: H3Event,
+  status?: 'pending' | 'approved' | 'rejected' | 'sold',
+  opts?: { limit?: number; slim?: boolean }
+): Promise<Listing[]> {
   const { getSupabaseServer } = await import('./supabase')
   const supabase = await getSupabaseServer(event)
 
   console.log('📖 Fetching listings from Supabase...', status ? `(status: ${status})` : '');
 
   // First, get listings
+  const columns = (opts?.slim)
+    ? 'id, user_id, middleman_id, nickname, server, growth_power, classes_list, asking_price, contact_link, contact_number, status, approved_by, approved_at, created_at'
+    : '*';
   let query = supabase
     .from("listings")
-    .select("*")
+    .select(columns)
     .order("created_at", { ascending: false });
 
   // Filter by status if provided
   if (status) {
     query = query.eq('status', status);
   }
+  if (opts?.limit) {
+    query = query.limit(opts.limit);
+  }
 
   const { data, error } = await query;
 
   if (error) {
     console.error('❌ Error fetching listings:', error);
+    // Fallback on timeout: retry with slim selection + limit
+    const code: any = (error as any).code || ''
+    const msg = String(error.message || '').toLowerCase()
+    if (code === '57014' || msg.includes('statement timeout')) {
+      try {
+        const { data: retryData } = await supabase
+          .from('listings')
+          .select('id, user_id, middleman_id, nickname, server, growth_power, classes_list, asking_price, contact_link, contact_number, status, approved_by, approved_at, created_at')
+          .order('created_at', { ascending: false })
+          .eq('status', status || 'approved')
+          .limit(opts?.limit || 60)
+        return (retryData || []).map((item: any) => ({
+          id: item.id,
+          userId: item.user_id || undefined,
+          middlemanId: item.middleman_id || undefined,
+          middleman: undefined, // attached later by caller if needed
+          nickname: item.nickname,
+          server: item.server,
+          growthPower: item.growth_power,
+          classesList: item.classes_list || [],
+          askingPrice: item.asking_price,
+          contactLink: item.contact_link || "",
+          contactNumber: item.contact_number,
+          images: [],
+          status: item.status || 'pending',
+          approvedBy: item.approved_by || undefined,
+          approvedAt: item.approved_at || undefined,
+          createdAt: item.created_at,
+        }))
+      } catch {}
+      return []
+    }
     throw new Error(`Failed to fetch listings: ${error.message}`);
   }
 
@@ -195,6 +237,57 @@ export async function getListingsFromDB(event: H3Event, status?: 'pending' | 'ap
     approvedAt: item.approved_at || undefined,
     createdAt: item.created_at,
   }));
+}
+
+export async function getListingById(event: H3Event, id: string): Promise<Listing | null> {
+  const { getSupabaseServer } = await import('./supabase')
+  const supabase = await getSupabaseServer(event)
+
+  const { data, error } = await supabase
+    .from('listings')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (error || !data) {
+    return null
+  }
+
+  let middleman: any = undefined
+  if (data.middleman_id) {
+    const { data: m } = await supabase
+      .from('middlemen')
+      .select('id, name, email, link')
+      .eq('id', data.middleman_id)
+      .single()
+    if (m) {
+      middleman = {
+        id: m.id,
+        name: m.name,
+        email: m.email,
+        link: m.link || undefined,
+      }
+    }
+  }
+
+  return {
+    id: data.id,
+    userId: data.user_id || undefined,
+    middlemanId: data.middleman_id || undefined,
+    middleman,
+    nickname: data.nickname,
+    server: data.server,
+    growthPower: data.growth_power,
+    classesList: data.classes_list || [],
+    askingPrice: data.asking_price,
+    contactLink: data.contact_link || '',
+    contactNumber: data.contact_number,
+    images: data.images || [],
+    status: data.status || 'pending',
+    approvedBy: data.approved_by || undefined,
+    approvedAt: data.approved_at || undefined,
+    createdAt: data.created_at,
+  }
 }
 
 export async function createUserInDB(
@@ -667,5 +760,349 @@ export async function deleteMiddlemanFromDB(
   if (error) {
     console.error('❌ Error deleting middleman:', error);
     throw new Error(`Failed to delete middleman: ${error.message}`);
+  }
+}
+
+type RokListing = {
+  id: string;
+  userId?: string;
+  middlemanId?: string;
+  askingPrice: string;
+  passportReady?: string;
+  passportNeeded?: string;
+  readyToMigrate?: string;
+  focusType?: string;
+  vipLevel?: string;
+  currentGoldHeads?: string;
+  troopCount?: string;
+  currentPower?: string;
+  firstPurchaseReceipt?: string;
+  hasVipSupport?: string;
+  kvkSeason?: string;
+  universalSpeedupsDays?: string;
+  equipment?: string;
+  topCommanders?: string;
+  contactLink?: string;
+  contactNumber: string;
+  farmAccounts?: string;
+  images: string[];
+  status?: 'pending' | 'approved' | 'rejected' | 'sold';
+  createdAt: string;
+};
+
+export async function addRokListingToDB(
+  event: H3Event,
+  input: Omit<RokListing, "id" | "createdAt">
+): Promise<RokListing> {
+  const { getSupabaseServer } = await import('./supabase')
+  const supabase = await getSupabaseServer(event)
+
+  const images = Array.isArray(input.images) ? input.images : [];
+
+  if (!input.askingPrice || !input.contactNumber || !input.userId) {
+    throw new Error('Missing required fields');
+  }
+
+  if (input.middlemanId) {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(input.middlemanId)) {
+      throw new Error('Invalid middleman ID format');
+    }
+  } else {
+    throw new Error('Middleman selection is required');
+  }
+
+  const { data, error } = await supabase
+    .from('rok_listings')
+    .insert({
+      user_id: input.userId || null,
+      middleman_id: input.middlemanId,
+      asking_price: input.askingPrice,
+      passport_ready: input.passportReady || null,
+      passport_needed: input.passportNeeded || null,
+      ready_to_migrate: input.readyToMigrate || null,
+      focus_type: input.focusType || null,
+      vip_level: input.vipLevel || null,
+      current_gold_heads: input.currentGoldHeads || null,
+      troop_count: input.troopCount || null,
+      current_power: input.currentPower || null,
+      first_purchase_receipt: input.firstPurchaseReceipt || null,
+      has_vip_support: input.hasVipSupport || null,
+      kvk_season: input.kvkSeason || null,
+      universal_speedups_days: input.universalSpeedupsDays || null,
+      equipment: input.equipment || null,
+      top_commanders: input.topCommanders || null,
+      contact_link: input.contactLink || null,
+      contact_number: input.contactNumber,
+      farm_accounts: input.farmAccounts || null,
+      images: images,
+      status: input.status || 'pending',
+    })
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to save Rise of Kingdoms listing: ${error.message}`);
+  }
+
+  return {
+    id: data.id,
+    userId: data.user_id || undefined,
+    middlemanId: data.middleman_id || undefined,
+    askingPrice: data.asking_price,
+    passportReady: data.passport_ready || undefined,
+    passportNeeded: data.passport_needed || undefined,
+    readyToMigrate: data.ready_to_migrate || undefined,
+    focusType: data.focus_type || undefined,
+    vipLevel: data.vip_level || undefined,
+    currentGoldHeads: data.current_gold_heads || undefined,
+    troopCount: data.troop_count || undefined,
+    currentPower: data.current_power || undefined,
+    firstPurchaseReceipt: data.first_purchase_receipt || undefined,
+    hasVipSupport: data.has_vip_support || undefined,
+    kvkSeason: data.kvk_season || undefined,
+    universalSpeedupsDays: data.universal_speedups_days || undefined,
+    equipment: data.equipment || undefined,
+    topCommanders: data.top_commanders || undefined,
+    contactLink: data.contact_link || undefined,
+    contactNumber: data.contact_number,
+    farmAccounts: data.farm_accounts || undefined,
+    images: data.images || [],
+    status: data.status || 'pending',
+    createdAt: data.created_at,
+  };
+}
+
+export async function getRokListingsFromDB(
+  event: H3Event,
+  status?: 'pending' | 'approved' | 'rejected' | 'sold',
+  opts?: { limit?: number; slim?: boolean }
+): Promise<RokListing[]> {
+  const { getSupabaseServer } = await import('./supabase')
+  const supabase = await getSupabaseServer(event)
+
+  const columns = (opts?.slim)
+    ? 'id, user_id, middleman_id, asking_price, passport_ready, passport_needed, ready_to_migrate, focus_type, vip_level, current_gold_heads, troop_count, current_power, first_purchase_receipt, has_vip_support, kvk_season, universal_speedups_days, equipment, top_commanders, contact_link, contact_number, farm_accounts, status, created_at'
+    : '*'
+  let query = supabase
+    .from('rok_listings')
+    .select(columns)
+    .order('created_at', { ascending: false })
+
+  if (status) {
+    query = query.eq('status', status)
+  }
+
+  if (opts?.limit) {
+    query = query.limit(opts.limit)
+  }
+
+  const { data, error } = await query
+  if (error) {
+    const code: any = (error as any).code || ''
+    const msg = String(error.message || '').toLowerCase()
+    if (code === '42P01' || msg.includes('relation') && msg.includes('does not exist')) {
+      return []
+    }
+    if (code === '42501' || msg.includes('permission denied')) {
+      return []
+    }
+    if (code === '57014' || msg.includes('statement timeout')) {
+      try {
+        const { data: retry } = await supabase
+          .from('rok_listings')
+          .select('id, user_id, middleman_id, asking_price, passport_ready, passport_needed, ready_to_migrate, focus_type, vip_level, current_gold_heads, troop_count, current_power, first_purchase_receipt, has_vip_support, kvk_season, universal_speedups_days, equipment, top_commanders, contact_link, contact_number, farm_accounts, status, created_at')
+          .order('created_at', { ascending: false })
+          .eq('status', status || 'approved')
+          .limit(opts?.limit || 60)
+        return (retry || []).map((item: any) => ({
+          id: item.id,
+          userId: item.user_id || undefined,
+          middlemanId: item.middleman_id || undefined,
+          askingPrice: item.asking_price,
+          passportReady: item.passport_ready || undefined,
+          passportNeeded: item.passport_needed || undefined,
+          readyToMigrate: item.ready_to_migrate || undefined,
+          focusType: item.focus_type || undefined,
+          vipLevel: item.vip_level || undefined,
+          currentGoldHeads: item.current_gold_heads || undefined,
+          troopCount: item.troop_count || undefined,
+          currentPower: item.current_power || undefined,
+          firstPurchaseReceipt: item.first_purchase_receipt || undefined,
+          hasVipSupport: item.has_vip_support || undefined,
+          kvkSeason: item.kvk_season || undefined,
+          universalSpeedupsDays: item.universal_speedups_days || undefined,
+          equipment: item.equipment || undefined,
+          topCommanders: item.top_commanders || undefined,
+          contactLink: item.contact_link || undefined,
+          contactNumber: item.contact_number,
+          farmAccounts: item.farm_accounts || undefined,
+          images: [],
+          status: item.status || 'pending',
+          createdAt: item.created_at,
+        }))
+      } catch {}
+      return []
+    }
+    throw new Error(`Failed to fetch Rise of Kingdoms listings: ${error.message}`)
+  }
+
+  const middlemanIds = [...new Set((data || [])
+    .map((item: any) => item.middleman_id)
+    .filter((id: any) => id !== null && id !== undefined))]
+
+  let middlemenMap = new Map()
+  if (middlemanIds.length > 0) {
+    const { data: middlemenData } = await supabase
+      .from('middlemen')
+      .select('id, name, email, link')
+      .in('id', middlemanIds);
+    (middlemenData || []).forEach((m: any) => {
+      middlemenMap.set(m.id, {
+        id: m.id,
+        name: m.name,
+        email: m.email,
+        link: m.link || undefined,
+      })
+    })
+  }
+
+  return (data || []).map((item: any) => ({
+    id: item.id,
+    userId: item.user_id || undefined,
+    middlemanId: item.middleman_id || undefined,
+    middleman: item.middleman_id ? middlemenMap.get(item.middleman_id) : undefined,
+    askingPrice: item.asking_price,
+    passportReady: item.passport_ready || undefined,
+    passportNeeded: item.passport_needed || undefined,
+    readyToMigrate: item.ready_to_migrate || undefined,
+    focusType: item.focus_type || undefined,
+    vipLevel: item.vip_level || undefined,
+    currentGoldHeads: item.current_gold_heads || undefined,
+    troopCount: item.troop_count || undefined,
+    currentPower: item.current_power || undefined,
+    firstPurchaseReceipt: item.first_purchase_receipt || undefined,
+    hasVipSupport: item.has_vip_support || undefined,
+    kvkSeason: item.kvk_season || undefined,
+    universalSpeedupsDays: item.universal_speedups_days || undefined,
+    equipment: item.equipment || undefined,
+    topCommanders: item.top_commanders || undefined,
+    contactLink: item.contact_link || undefined,
+    contactNumber: item.contact_number,
+    farmAccounts: item.farm_accounts || undefined,
+    images: item.images || [],
+    status: item.status || 'pending',
+    createdAt: item.created_at,
+  }))
+}
+
+export async function getRokListingById(event: H3Event, id: string): Promise<RokListing | null> {
+  const { getSupabaseServer } = await import('./supabase')
+  const supabase = await getSupabaseServer(event)
+
+  const { data, error } = await supabase
+    .from('rok_listings')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (error || !data) {
+    return null
+  }
+
+  let middleman: any = undefined
+  if (data.middleman_id) {
+    const { data: m } = await supabase
+      .from('middlemen')
+      .select('id, name, email, link')
+      .eq('id', data.middleman_id)
+      .single()
+    if (m) {
+      middleman = {
+        id: m.id,
+        name: m.name,
+        email: m.email,
+        link: m.link || undefined,
+      }
+    }
+  }
+
+  return {
+    id: data.id,
+    userId: data.user_id || undefined,
+    middlemanId: data.middleman_id || undefined,
+    askingPrice: data.asking_price,
+    passportReady: data.passport_ready || undefined,
+    passportNeeded: data.passport_needed || undefined,
+    readyToMigrate: data.ready_to_migrate || undefined,
+    focusType: data.focus_type || undefined,
+    vipLevel: data.vip_level || undefined,
+    currentGoldHeads: data.current_gold_heads || undefined,
+    troopCount: data.troop_count || undefined,
+    currentPower: data.current_power || undefined,
+    firstPurchaseReceipt: data.first_purchase_receipt || undefined,
+    hasVipSupport: data.has_vip_support || undefined,
+    kvkSeason: data.kvk_season || undefined,
+    universalSpeedupsDays: data.universal_speedups_days || undefined,
+    equipment: data.equipment || undefined,
+    topCommanders: data.top_commanders || undefined,
+    contactLink: data.contact_link || undefined,
+    contactNumber: data.contact_number,
+    farmAccounts: data.farm_accounts || undefined,
+    images: data.images || [],
+    status: data.status || 'pending',
+    createdAt: data.created_at,
+    // @ts-ignore
+    middleman,
+  }
+}
+
+export async function updateRokListingStatus(
+  event: H3Event,
+  listingId: string,
+  status: 'approved' | 'rejected' | 'sold'
+): Promise<RokListing> {
+  const { getSupabaseServer } = await import('./supabase')
+  const supabase = await getSupabaseServer(event)
+
+  const { data: updatedData, error } = await supabase
+    .from('rok_listings')
+    .update({ status })
+    .eq('id', listingId)
+    .select()
+
+  if (error) {
+    throw new Error(`Failed to update ROK listing status: ${error.message}`)
+  }
+  if (!updatedData || updatedData.length === 0) {
+    throw new Error(`ROK listing not found: ${listingId}`)
+  }
+
+  const item = updatedData[0]
+  return {
+    id: item.id,
+    userId: item.user_id || undefined,
+    middlemanId: item.middleman_id || undefined,
+    askingPrice: item.asking_price,
+    passportReady: item.passport_ready || undefined,
+    passportNeeded: item.passport_needed || undefined,
+    readyToMigrate: item.ready_to_migrate || undefined,
+    focusType: item.focus_type || undefined,
+    vipLevel: item.vip_level || undefined,
+    currentGoldHeads: item.current_gold_heads || undefined,
+    troopCount: item.troop_count || undefined,
+    currentPower: item.current_power || undefined,
+    firstPurchaseReceipt: item.first_purchase_receipt || undefined,
+    hasVipSupport: item.has_vip_support || undefined,
+    kvkSeason: item.kvk_season || undefined,
+    universalSpeedupsDays: item.universal_speedups_days || undefined,
+    equipment: item.equipment || undefined,
+    topCommanders: item.top_commanders || undefined,
+    contactLink: item.contact_link || undefined,
+    contactNumber: item.contact_number,
+    farmAccounts: item.farm_accounts || undefined,
+    images: item.images || [],
+    status: item.status || 'pending',
+    createdAt: item.created_at,
   }
 }
