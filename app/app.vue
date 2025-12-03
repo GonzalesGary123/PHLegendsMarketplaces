@@ -249,7 +249,7 @@
                 Discover a curated marketplace for your favorite online games. Browse listings, connect with verified middlemen, and trade with confidence.
               </p>
               <div class="flex flex-wrap items-center gap-3 mt-2">
-                <button
+                <!-- <button
                   type="button"
                   @click="goToGame('ymir')"
                   :class="[
@@ -259,7 +259,7 @@
                 >
                   <span>🎮</span>
                   <span>Browse Ymir</span>
-                </button>
+                </button> -->
                 <button
                   type="button"
                   @click="goToGame('rok')"
@@ -315,14 +315,14 @@
                   <div class="flex items-center justify-between">
                     <span :class="theme === 'dark' ? 'text-slate-300' : 'text-slate-700'">Supported Games</span>
                     <span class="font-semibold" :class="theme === 'dark' ? 'text-slate-100' : 'text-slate-900'">
-                      2
+                      1
                     </span>
                   </div>
                   <p
                     class="text-xs mt-3"
                     :class="theme === 'dark' ? 'text-slate-500' : 'text-slate-500'"
                   >
-                    More games coming soon. Start with Legends of Ymir today.
+                    More games coming soon. Start with Rise of Kingdoms today.
                   </p>
                 </div>
               </div>
@@ -331,41 +331,6 @@
         </div>
         <!-- Game selection grid -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div
-            :class="[
-              'relative overflow-hidden rounded-2xl border p-6 flex flex-col justify-between gap-4 transition-all duration-300 ease-in-out cursor-pointer',
-              theme === 'dark'
-                ? 'border-emerald-500/40 bg-emerald-500/5 hover:border-emerald-400'
-                : 'border-emerald-200 bg-emerald-50/60 hover:border-emerald-400',
-            ]"
-            @click="goToGame('ymir')"
-          >
-            <img :src="ymirDefaultImg" alt="Ymir" class="absolute inset-0 w-full h-full object-cover opacity-20" />
-            <div class="relative space-y-2">
-              <p class="text-xs font-semibold tracking-wide uppercase"
-                :class="theme === 'dark' ? 'text-emerald-300' : 'text-emerald-700'">
-                Featured
-              </p>
-              <h3 class="text-xl font-bold"
-                :class="theme === 'dark' ? 'text-slate-50' : 'text-slate-900'">
-                Legends of Ymir
-              </h3>
-              <p class="text-sm"
-                :class="theme === 'dark' ? 'text-slate-300' : 'text-slate-700'">
-                Browse verified Legends of Ymir accounts with trusted middleman support.
-              </p>
-            </div>
-            <div class="flex items-center justify-between text-xs mt-2">
-              <span :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
-                Live listings ready to trade
-              </span>
-              <span class="inline-flex items-center gap-1 font-semibold"
-                :class="theme === 'dark' ? 'text-emerald-300' : 'text-emerald-600'">
-                <span>Browse</span>
-                <span>➜</span>
-              </span>
-            </div>
-          </div>
 
           <div
             :class="[
@@ -485,20 +450,6 @@
       <div v-if="activeTab === 'post' && currentUser" class="mb-4 flex items-center gap-2">
         <button
           type="button"
-          @click="postingGame = 'ymir'"
-          :class="[
-            'rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-300 ease-in-out',
-            postingGame === 'ymir'
-              ? 'bg-emerald-600 text-white hover:bg-emerald-500'
-              : theme === 'dark'
-                ? 'bg-slate-800 text-slate-200 hover:bg-slate-700'
-                : 'bg-slate-100 text-slate-800 hover:bg-slate-200',
-          ]"
-        >
-          Legend of Ymir
-        </button>
-        <button
-          type="button"
           @click="postingGame = 'rok'"
           :class="[
             'rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-300 ease-in-out',
@@ -514,7 +465,7 @@
       </div>
 
       <form
-        v-if="activeTab === 'post' && currentUser && postingGame === 'ymir'"
+        v-if="false"
         :class="[
           'space-y-8 p-8 rounded-lg border shadow-lg transition-all duration-300 ease-in-out',
           theme === 'dark'
@@ -1465,7 +1416,7 @@
                 </h2>
                 <p class="text-base"
                   :class="theme === 'dark' ? 'text-slate-300' : 'text-slate-700'">
-                  Browse premium {{ filters.game === 'rok' ? 'Rise of Kingdoms' : 'Legends of Ymir' }} accounts for sale
+                  Browse premium Rise of Kingdoms accounts for sale
                 </p>
               </div>
               <button
@@ -1630,7 +1581,6 @@
                     : 'border-slate-300 bg-white text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20',
                 ]"
               >
-                <option value="ymir">Legends of Ymir</option>
                 <option value="rok">Rise of Kingdoms</option>
               </select>
             </div>
@@ -4402,7 +4352,7 @@ const form = reactive({
   middlemanId: "",
 });
 
-const postingGame = ref<'ymir' | 'rok'>('ymir');
+const postingGame = ref<'ymir' | 'rok'>('rok');
 const rokForm = reactive({
   askingPrice: "",
   middlemanId: "",
@@ -4450,8 +4400,38 @@ const listings = ref<ListingResponse[]>([]);
 const loadingListings = ref(false);
 const listingsError = ref("");
 
+const LISTINGS_CACHE_KEY = "phl_listings_cache_v1";
+const LISTINGS_CACHE_TTL_MS = 300000;
+const getCachedListings = (game: string): ListingResponse[] | null => {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(LISTINGS_CACHE_KEY);
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    const entry = obj?.[game];
+    if (!entry) return null;
+    if (Date.now() - entry.ts > LISTINGS_CACHE_TTL_MS) return null;
+    return entry.data as ListingResponse[];
+  } catch {
+    return null;
+  }
+};
+const setCachedListings = (game: string, data: ListingResponse[]) => {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = window.localStorage.getItem(LISTINGS_CACHE_KEY);
+    const obj = raw ? JSON.parse(raw) : {};
+    obj[game] = { ts: Date.now(), data };
+    window.localStorage.setItem(LISTINGS_CACHE_KEY, JSON.stringify(obj));
+  } catch {}
+};
+
+const detailCache = new Map<string, { ts: number; data: ListingResponse }>();
+
+let listingsRequestCounter = 0;
+
 const filters = reactive({
-  game: "ymir",
+  game: "rok",
   codeId: "",
   server: "",
   className: "",
@@ -4486,8 +4466,8 @@ const showListingModal = ref(false);
 const selectedListing = ref<ListingResponse | null>(null);
 
 const previewImage = ref<string | null>(null);
-const selectedDefaultImage = computed(() => (selectedListing.value?.game === 'rok' ? rokDefaultImg : ymirDefaultImg));
-const submittedDefaultImage = computed(() => (submittedListing.value?.game === 'rok' ? rokDefaultImg : ymirDefaultImg));
+const selectedDefaultImage = computed(() => rokDefaultImg);
+const submittedDefaultImage = computed(() => rokDefaultImg);
 
 const copiedId = ref<string | null>(null);
 const copyCodeId = async (id: number | string) => {
@@ -4899,7 +4879,18 @@ onMounted(() => {
       showLandingPage.value = !currentUser.value;
 
       // Load listings on mount (marketplace is default view)
-      loadListings();
+      const isReload = (() => {
+        try {
+          // Navigation Timing Level 2
+          // @ts-ignore
+          const nav = performance.getEntriesByType && performance.getEntriesByType('navigation');
+          if (nav && nav[0] && (nav[0] as any).type === 'reload') return true;
+          // Legacy fallback
+          // @ts-ignore
+          return performance && performance.navigation && performance.navigation.type === (performance.navigation as any).TYPE_RELOAD;
+        } catch { return false; }
+      })();
+      loadListings(isReload);
       
       // Load middlemen for form selector
       loadMiddlemen();
@@ -4963,7 +4954,7 @@ const setTab = (tab: "post" | "listings" | "feedback" | "auth" | "admin") => {
   }
 };
 
-const goToGame = (game: 'ymir' | 'rok') => {
+const goToGame = (game: 'rok') => {
   showLandingPage.value = false;
   filters.game = game;
   setTab('listings');
@@ -5041,10 +5032,16 @@ const openListingModal = async (item: ListingResponse) => {
   try {
     loadingSelectedListing.value = true;
     const game = item.game || 'ymir';
+    const key = `${game}:${String(item.id)}`;
+    const entry = detailCache.get(key);
+    if (entry && Date.now() - entry.ts < 60 * 60 * 1000) {
+      selectedListing.value = entry.data;
+      return;
+    }
     const detail = await $fetch<ListingResponse>(`/api/listing?id=${encodeURIComponent(String(item.id))}&game=${game}`);
     selectedListing.value = detail;
+    detailCache.set(key, { ts: Date.now(), data: detail });
   } catch (err: any) {
-    // keep existing lightweight data in modal if detail fails
   } finally {
     loadingSelectedListing.value = false;
   }
@@ -5317,7 +5314,7 @@ const filteredListings = computed(() => {
 });
 
 const resetFilters = () => {
-  filters.game = "ymir";
+  filters.game = "";
   filters.codeId = "";
   filters.server = "";
   filters.className = "";
@@ -5352,14 +5349,26 @@ watch(
   }
 );
 
-const loadListings = async () => {
-  loadingListings.value = true;
+const loadListings = async (force = false) => {
+  const reqId = ++listingsRequestCounter;
+  const game = filters.game || 'all';
+  const cached = getCachedListings(game);
+  loadingListings.value = !cached;
   listingsError.value = "";
 
   try {
-    const qs = filters.game ? `?game=${filters.game}&force=1` : "?force=1";
+    if (cached && cached.length) {
+      listings.value = cached;
+    }
+    const qsParts: string[] = [];
+    if (filters.game) qsParts.push(`game=${filters.game}`);
+    if (force) qsParts.push(`force=1`);
+    const qs = qsParts.length ? `?${qsParts.join('&')}` : "";
     const data = await $fetch<ListingResponse[]>(`/api/listings${qs}`);
-    listings.value = data;
+    if (reqId === listingsRequestCounter) {
+      listings.value = data;
+      setCachedListings(game, data);
+    }
   } catch (err: any) {
     const message =
       err?.data?.message ||
@@ -6165,3 +6174,10 @@ onUnmounted(() => {
 });
 
 </script>
+onUnmounted(() => {
+  if (typeof window !== "undefined") {
+    try {
+      window.removeEventListener("click", handleClickOutsideNotifications);
+    } catch {}
+  }
+});

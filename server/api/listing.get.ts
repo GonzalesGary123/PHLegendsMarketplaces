@@ -1,6 +1,9 @@
-import { createError, defineEventHandler, getQuery } from 'h3'
+import { createError, defineEventHandler, getQuery, setResponseHeader } from 'h3'
 import { getListingById, getRokListingById } from '../utils/db'
 import { sanitizeString } from '../utils/security'
+
+const detailCache = new Map<string, { ts: number; data: any }>()
+const DETAIL_TTL_MS = 60 * 60 * 1000
 
 export default defineEventHandler(async (event) => {
   const { id, game } = getQuery(event) as any
@@ -21,12 +24,18 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
+    setResponseHeader(event, 'Cache-Control', 'public, max-age=60, stale-while-revalidate=600')
+    const cacheKey = `${gameKey}:${listingId}`
+    const entry = detailCache.get(cacheKey)
+    if (entry && Date.now() - entry.ts < DETAIL_TTL_MS) {
+      return entry.data
+    }
     if (gameKey === 'rok') {
       const item = await getRokListingById(event, listingId)
       if (!item) {
         throw createError({ statusCode: 404, statusMessage: 'Listing not found.' })
       }
-      return {
+      const data = {
         id: item.id,
         userId: item.userId,
         middlemanId: item.middlemanId,
@@ -60,13 +69,17 @@ export default defineEventHandler(async (event) => {
         topCommanders: item.topCommanders,
         farmAccounts: item.farmAccounts,
       }
+      detailCache.set(cacheKey, { ts: Date.now(), data })
+      return data
     }
 
     const item = await getListingById(event, listingId)
     if (!item) {
       throw createError({ statusCode: 404, statusMessage: 'Listing not found.' })
     }
-    return { ...item, game: 'ymir' as const }
+    const data = { ...item, game: 'ymir' as const }
+    detailCache.set(cacheKey, { ts: Date.now(), data })
+    return data
   } catch (err: any) {
     if (err.statusCode) {
       throw err

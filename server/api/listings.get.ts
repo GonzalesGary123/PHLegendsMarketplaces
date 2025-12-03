@@ -1,14 +1,15 @@
-import { createError, defineEventHandler, getQuery } from "h3";
+import { createError, defineEventHandler, getQuery, setResponseHeader } from "h3";
 import { getListingsFromDB, getRokListingsFromDB } from "../utils/db";
 let cacheYmir: any[] = [];
 let cacheRok: any[] = [];
 let cacheTs = 0;
-const TTL_MS = 15000;
+const TTL_MS = 300000;
 
 export default defineEventHandler(async (event) => {
   const { game, force } = getQuery(event) as any;
   const now = Date.now();
   const fresh = !force && now - cacheTs < TTL_MS;
+  setResponseHeader(event, 'Cache-Control', 'public, max-age=60, stale-while-revalidate=600');
   try {
     if ((game === 'ymir' || game === 'rok') && fresh) {
       if (game === 'ymir') return cacheYmir;
