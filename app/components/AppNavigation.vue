@@ -51,7 +51,7 @@
       >
         <span>Feedback</span>
       </button>
-      <button
+      <!-- <button
         v-if="currentUser?.isAdmin"
         type="button"
         @click="$emit('tab-change', 'admin')"
@@ -67,7 +67,7 @@
         ]"
       >
         <span>Admin</span>
-      </button>
+      </button> -->
       <button
         type="button"
         @click="$emit('tab-change', 'auth')"
