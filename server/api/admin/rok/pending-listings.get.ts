@@ -1,4 +1,4 @@
-import { createError, defineEventHandler, getQuery } from "h3";
+import { createError, defineEventHandler, getQuery, setResponseHeader } from "h3";
 import { getRokListingsFromDB, isAdminUser } from "../../../utils/db";
 
 export default defineEventHandler(async (event) => {
@@ -30,6 +30,7 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
+    setResponseHeader(event, 'Cache-Control', 'no-store')
     return await getRokListingsFromDB(event, status as any);
   } catch (err: any) {
     throw createError({

@@ -96,8 +96,14 @@ defineProps<{
   currentUser: { id: number | string; email: string; fullName?: string; isAdmin?: boolean } | null;
 }>();
 
-defineEmits<{
+
+const emit = defineEmits<{
   'tab-change': [tab: 'post' | 'listings' | 'feedback' | 'auth' | 'admin'];
 }>();
+
+const onAdminClick = () => {
+  emit('tab-change', 'admin');
+  navigateTo('/admin');
+};
 </script>
 

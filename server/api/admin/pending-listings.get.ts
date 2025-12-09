@@ -1,4 +1,4 @@
-import { createError, defineEventHandler, getQuery } from "h3";
+import { createError, defineEventHandler, getQuery, setResponseHeader } from "h3";
 import { getListingsFromDB, isAdminUser } from "../../utils/db";
 
 export default defineEventHandler(async (event) => {
@@ -32,7 +32,7 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    // Return listings with the specified status
+    setResponseHeader(event, 'Cache-Control', 'no-store')
     return await getListingsFromDB(event, status as 'pending' | 'approved' | 'rejected' | 'sold');
   } catch (err: any) {
     console.error('Failed to fetch listings:', err);

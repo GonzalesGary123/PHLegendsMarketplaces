@@ -1,9 +1,9 @@
-// server/api/middlemen.get.ts
-import { defineEventHandler } from "h3";
+import { defineEventHandler, setResponseHeader, createError } from "h3";
 import { getMiddlemenFromDB } from "../utils/db";
 
 export default defineEventHandler(async (event) => {
   try {
+    setResponseHeader(event, 'Cache-Control', 'no-store')
     const middlemen = await getMiddlemenFromDB(event);
     return middlemen;
   } catch (err: any) {

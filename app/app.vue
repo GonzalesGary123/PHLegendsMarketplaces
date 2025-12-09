@@ -204,7 +204,9 @@
       </div>
     </header>
 
-    <main class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      <main class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+        <AdminDashboard v-if="isAdminRoute" />
+        <template v-else>
       <!-- Public Landing Page (shown to logged-out users by default) -->
       <section
         v-if="showLandingPage"
@@ -403,6 +405,57 @@
           
           
 
+        </div>
+        <div class="mt-8 rounded-2xl border p-6 sm:p-8"
+          :class="theme === 'dark' ? 'border-slate-700 bg-slate-900/70' : 'border-slate-200 bg-white'">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-bold" :class="theme === 'dark' ? 'text-slate-100' : 'text-slate-900'">Recent Middleman Feedback</h3>
+            <button type="button" @click="loadLandingFeedback" :disabled="landingFeedbackLoading"
+              :class="[
+                'inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold',
+                theme === 'dark'
+                  ? 'border border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800'
+                  : 'border border-slate-300 bg-white text-slate-800 hover:bg-slate-50',
+              ]">
+              <span>🔄</span>
+              <span>{{ landingFeedbackLoading ? 'Refreshing...' : 'Refresh' }}</span>
+            </button>
+          </div>
+          <div v-if="landingFeedbackLoading" class="text-center py-8">
+            <span class="inline-block animate-spin text-2xl mb-2">⏳</span>
+            <p class="text-xs" :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">Loading feedback...</p>
+          </div>
+          <div v-else-if="landingFeedbackError" :class="[
+            'rounded-lg border p-4 text-center',
+            theme === 'dark' ? 'border-red-500/50 bg-red-500/10 text-red-300' : 'border-red-300 bg-red-50 text-red-700',
+          ]">
+            {{ landingFeedbackError }}
+          </div>
+          <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div v-for="item in landingFeedback" :key="item.middleman.id" :class="[
+              'rounded-xl border p-4 space-y-2',
+              theme === 'dark' ? 'border-slate-700 bg-slate-900/60' : 'border-slate-200 bg-white',
+            ]">
+              <div class="flex items-center gap-2">
+                <span>MM: </span>
+                <div class="font-semibold">{{ item.middleman.name }}</div>
+              </div>
+              <p class="text-sm" :class="theme === 'dark' ? 'text-slate-300' : 'text-slate-700'">“{{ item.feedback.comment }}”</p>
+              <div class="flex items-center justify-between text-xs" :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
+                <div class="flex items-center gap-1">
+                  <span>⭐</span>
+                  <span>{{ item.feedback.rating ?? 'N/A' }}</span>
+                </div>
+                <div>{{ new Date(item.feedback.createdAt).toLocaleDateString() }}</div>
+              </div>
+            </div>
+            <div v-if="!landingFeedback.length" :class="[
+              'rounded-xl border p-6 text-center',
+              theme === 'dark' ? 'border-slate-700 bg-slate-900/60' : 'border-slate-200 bg-white',
+            ]">
+              <p class="text-sm" :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">No feedback yet. Check back soon.</p>
+            </div>
+          </div>
         </div>
       </section>
       <template v-else>
@@ -1419,30 +1472,46 @@
                   Browse premium Rise of Kingdoms accounts for sale
                 </p>
               </div>
-              <button
-                v-if="currentUser"
-                type="button"
-                @click="setTab('post')"
-                :class="[
-                  'inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold text-white transition-all duration-300 ease-in-out shadow-lg',
-                  'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 hover:scale-[1.02] hover:shadow-xl',
-                ]"
-              >
-                <span>➕</span>
-                <span>Post New Listing</span>
-              </button>
-              <button
-                v-else
-                type="button"
-                @click="setTab('auth')"
-                :class="[
-                  'inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold text-white transition-all duration-300 ease-in-out shadow-lg',
-                  'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 hover:scale-[1.02] hover:shadow-xl',
-                ]"
-              >
-                <span>🔐</span>
-                <span>Login to Sell</span>
-              </button>
+              <div class="flex items-center gap-3">
+                <button
+                  v-if="currentUser"
+                  type="button"
+                  @click="setTab('post')"
+                  :class="[
+                    'inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold text-white transition-all duration-300 ease-in-out shadow-lg',
+                    'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 hover:scale-[1.02] hover:shadow-xl',
+                  ]"
+                >
+                  <span>➕</span>
+                  <span>Post New Listing</span>
+                </button>
+                <button
+                  v-else
+                  type="button"
+                  @click="setTab('auth')"
+                  :class="[
+                    'inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold text-white transition-all duration-300 ease-in-out shadow-lg',
+                    'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 hover:scale-[1.02] hover:shadow-xl',
+                  ]"
+                >
+                  <span>🔐</span>
+                  <span>Login to Sell</span>
+                </button>
+                <button
+                  type="button"
+                  @click="refreshListings"
+                  :disabled="loadingListings"
+                  :class="[
+                    'inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold transition-all duration-300 ease-in-out',
+                    theme === 'dark'
+                      ? 'border border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800'
+                      : 'border border-slate-300 bg-white text-slate-800 hover:bg-slate-50',
+                  ]"
+                >
+                  <span>🔄</span>
+                  <span>{{ loadingListings ? 'Refreshing...' : 'Refresh' }}</span>
+                </button>
+              </div>
             </div>
             
             <!-- Stats -->
@@ -2202,7 +2271,7 @@
               <div class="mb-3 flex items-center gap-2 text-xs"
                 :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-600'">
                 <span>🆔</span>
-                <span>Code ID: {{ item.id }}</span>
+                <span>Code: {{ item.id }}</span>
                 <button
                   type="button"
                   @click.stop="copyCodeId(item.id)"
@@ -2318,6 +2387,13 @@
                       Contact Link
                     </a>
                   </div>
+                </div>
+                <div
+                  v-if="currentUser?.isAdmin && item.status !== 'sold' && item.middleman"
+                  class="flex items-center justify-center gap-2 text-xs pt-1"
+                  :class="theme === 'dark' ? 'text-slate-500' : 'text-slate-600'">
+                  <span>💼</span>
+                  <span>{{ item.middleman.name }} - {{ item.middleman.email }}</span>
                 </div>
                 <div 
                   v-else-if="!currentUser && item.status !== 'sold'"
@@ -3566,7 +3642,7 @@
             </p>
           </div>
           <div class="flex items-center gap-2">
-            <button
+            <!-- <button
               type="button"
               @click="adminGame = 'ymir'"
               :class="[
@@ -3579,7 +3655,7 @@
               ]"
             >
               Legend of Ymir
-            </button>
+            </button> -->
             <button
               type="button"
               @click="adminGame = 'rok'"
@@ -4287,12 +4363,14 @@
           </div>
         </div>
       </section>
+      </template>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
 import { reactive, ref, onMounted, watch, computed, onUnmounted } from "vue";
+import AdminDashboard from './components/AdminDashboard.vue'
 import ymirDefaultImg from "./assets/img/LegendofYmir.png";
 import rokDefaultImg from "./assets/img/riseofkingdom.png";
 
@@ -4396,6 +4474,21 @@ const currentUser = ref<
   { id: number | string; email: string; fullName?: string; isAdmin?: boolean } | null
 >(null);
 
+const route = useRoute();
+const reqUrl = useRequestURL();
+const initialPath = reqUrl?.pathname || '/';
+const isAdminRoute = computed(() => {
+  const path = String(route?.path || initialPath || '');
+  return path.startsWith('/admin');
+});
+
+watch(() => route.path, (newPath) => {
+  if (newPath === '/' && activeTab.value === 'admin') {
+    activeTab.value = 'listings';
+  }
+});
+
+
 const listings = ref<ListingResponse[]>([]);
 const loadingListings = ref(false);
 const listingsError = ref("");
@@ -4439,7 +4532,7 @@ const filters = reactive({
   maxPrice: "",
   minGrowthPower: "",
   maxGrowthPower: "",
-  soldStatus: "",
+  soldStatus: "unsold",
   rokVipMin: "",
   rokVipMax: "",
   rokPowerMin: "",
@@ -4606,10 +4699,8 @@ const isMiddlemanForListing = (listing: ListingResponse) => {
 };
 
 const shouldShowSellerContact = (listing: ListingResponse) => {
-  if (listing.middlemanId) {
-    return false;
-  }
-  return true;
+  if (currentUser.value?.isAdmin) return true;
+  return !listing.middlemanId;
 };
 
 // Middlemen state
@@ -4621,9 +4712,23 @@ type MiddlemanResponse = {
   createdAt: string;
 };
 
+type FeedbackResponse = {
+  id: string;
+  userId: string;
+  middlemanId?: string;
+  type: 'app' | 'middleman';
+  rating?: number;
+  comment: string;
+  createdAt: string;
+};
+
 const middlemen = ref<MiddlemanResponse[]>([]);
 const loadingMiddlemen = ref(false);
 const middlemenError = ref("");
+
+const landingFeedbackLoading = ref(false);
+const landingFeedbackError = ref("");
+const landingFeedback = ref<{ middleman: MiddlemanResponse; feedback: FeedbackResponse }[]>([]);
 
 // Admin middlemen management state
 const newMiddleman = reactive({
@@ -4658,6 +4763,32 @@ const loadMiddlemen = async () => {
     middlemenError.value = message;
   } finally {
     loadingMiddlemen.value = false;
+  }
+};
+
+const loadLandingFeedback = async () => {
+  landingFeedbackLoading.value = true;
+  landingFeedbackError.value = "";
+  try {
+    const ms = middlemen.value.slice(0, 3);
+    if (!ms.length) {
+      landingFeedback.value = [];
+      return;
+    }
+    const results = await Promise.all(
+      ms.map((m) => $fetch<FeedbackResponse[]>("/api/middlemen/feedback", { query: { middlemanId: m.id } }))
+    );
+    const items: { middleman: MiddlemanResponse; feedback: FeedbackResponse }[] = [];
+    for (let i = 0; i < ms.length; i++) {
+      const arr = results[i] || [];
+      if (arr.length) items.push({ middleman: ms[i], feedback: arr[0] });
+    }
+    landingFeedback.value = items;
+  } catch (err: any) {
+    const message = err?.data?.message || err?.statusMessage || err?.message || "Failed to load feedback.";
+    landingFeedbackError.value = message;
+  } finally {
+    landingFeedbackLoading.value = false;
   }
 };
 
@@ -4893,7 +5024,7 @@ onMounted(() => {
       loadListings(isReload);
       
       // Load middlemen for form selector
-      loadMiddlemen();
+      loadMiddlemen().then(() => loadLandingFeedback());
       
       // Load notifications if user is logged in
       if (currentUser.value) {
@@ -4938,11 +5069,7 @@ const setTab = (tab: "post" | "listings" | "feedback" | "auth" | "admin") => {
     loadListings();
   }
   if (tab === "admin") {
-    loadMiddlemen();
-    loadPendingListings();
-    loadApprovedListings();
-    loadPendingRokListings();
-    loadApprovedRokListings();
+    navigateTo('/admin');
   }
   if (tab === "auth" && currentUser.value) {
     profileForm.fullName = currentUser.value.fullName || "";
@@ -4952,6 +5079,11 @@ const setTab = (tab: "post" | "listings" | "feedback" | "auth" | "admin") => {
     profileMessage.value = "";
     loadUserListings();
   }
+};
+
+const refreshListings = async () => {
+  try { if (typeof window !== 'undefined') window.localStorage.removeItem(LISTINGS_CACHE_KEY) } catch {}
+  await loadListings(true);
 };
 
 const goToGame = (game: 'rok') => {
@@ -5322,7 +5454,7 @@ const resetFilters = () => {
   filters.maxPrice = "";
   filters.minGrowthPower = "";
   filters.maxGrowthPower = "";
-  filters.soldStatus = "";
+  filters.soldStatus = "unsold";
   filters.rokVipMin = "";
   filters.rokVipMax = "";
   filters.rokPowerMin = "";
@@ -5926,8 +6058,9 @@ const approveListing = async (listingId: string | number) => {
                 // Remove from pending list and reload
     pendingListings.value = pendingListings.value.filter((l) => l.id !== listingId);
     
-    // Reload approved listings since this one is now approved
     loadApprovedListings();
+    try { if (typeof window !== 'undefined') window.localStorage.removeItem(LISTINGS_CACHE_KEY) } catch {}
+    loadListings(true);
     
     // Refresh notifications for the listing owner (notification was created on backend)
   } catch (err: any) {
@@ -6069,9 +6202,9 @@ const markAsSold = async (listingId: string | number) => {
       },
     });
     
-    // Remove from approved list and reload marketplace
     approvedListings.value = approvedListings.value.filter((l) => l.id !== listingId);
-    loadListings(); // Refresh marketplace to remove sold listing
+    try { if (typeof window !== 'undefined') window.localStorage.removeItem(LISTINGS_CACHE_KEY) } catch {}
+    loadListings(true);
   } catch (err: any) {
     const message =
       err?.data?.message ||
