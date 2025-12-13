@@ -892,18 +892,19 @@
               :class="theme === 'dark' ? 'text-slate-200' : 'text-slate-700'">
               <span>Farm Accounts *</span>
             </label>
-            <input
-              v-model="rokForm.farmAccounts"
-              type="text"
-              required
-              placeholder="e.g. 10 x Farm Accounts ready migration"
-              :class="[
-                'w-full rounded-lg border px-4 py-3 text-sm transition-all duration-300 ease-in-out',
-                theme === 'dark'
-                  ? 'border-slate-600 bg-slate-700 text-slate-100 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
-                  : 'border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20',
-              ]"
-            />
+              <input
+                v-model="rokForm.farmAccounts"
+                type="text"
+                required
+                placeholder="e.g. 10 x Farm Accounts ready migration"
+                maxlength="20"
+                :class="[
+                  'w-full rounded-lg border px-4 py-3 text-sm transition-all duration-300 ease-in-out',
+                  theme === 'dark'
+                    ? 'border-slate-600 bg-slate-700 text-slate-100 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
+                    : 'border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20',
+                ]"
+              />
           </div>
 
           <div class="space-y-2">
@@ -994,18 +995,19 @@
               :class="theme === 'dark' ? 'text-slate-200' : 'text-slate-700'">
               <span>VIP Level *</span>
             </label>
-            <input
-              v-model="rokForm.vipLevel"
-              type="text"
-              required
-              placeholder="1-19 or SVIP"
-              :class="[
-                'w-full rounded-lg border px-4 py-3 text-sm transition-all duration-300 ease-in-out',
-                theme === 'dark'
-                  ? 'border-slate-600 bg-slate-700 text-slate-100 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
-                  : 'border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20',
-              ]"
-            />
+              <input
+                v-model="rokForm.vipLevel"
+                type="text"
+                required
+                placeholder="1-19 or SVIP"
+                maxlength="10"
+                :class="[
+                  'w-full rounded-lg border px-4 py-3 text-sm transition-all duration-300 ease-in-out',
+                  theme === 'dark'
+                    ? 'border-slate-600 bg-slate-700 text-slate-100 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
+                    : 'border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20',
+                ]"
+              />
           </div>
 
           <div class="space-y-2">
@@ -1034,18 +1036,19 @@
               :class="theme === 'dark' ? 'text-slate-200' : 'text-slate-700'">
               <span>Troop Count *</span>
             </label>
-            <input
-              v-model="rokForm.troopCount"
-              type="text"
-              required
-              placeholder="e.g. 10,000,000"
-              :class="[
-                'w-full rounded-lg border px-4 py-3 text-sm transition-all duration-300 ease-in-out',
-                theme === 'dark'
-                  ? 'border-slate-600 bg-slate-700 text-slate-100 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
-                  : 'border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20',
-              ]"
-            />
+              <input
+                v-model="rokForm.troopCount"
+                type="text"
+                required
+                placeholder="e.g. 10,000,000"
+                maxlength="30"
+                :class="[
+                  'w-full rounded-lg border px-4 py-3 text-sm transition-all duration-300 ease-in-out',
+                  theme === 'dark'
+                    ? 'border-slate-600 bg-slate-700 text-slate-100 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
+                    : 'border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20',
+                ]"
+              />
           </div>
 
           <div class="space-y-2">
@@ -1053,18 +1056,19 @@
               :class="theme === 'dark' ? 'text-slate-200' : 'text-slate-700'">
               <span>Current Power *</span>
             </label>
-            <input
-              v-model="rokForm.currentPower"
-              type="text"
-              required
-              placeholder="e.g. 500M"
-              :class="[
-                'w-full rounded-lg border px-4 py-3 text-sm transition-all duration-300 ease-in-out',
-                theme === 'dark'
-                  ? 'border-slate-600 bg-slate-700 text-slate-100 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
-                  : 'border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20',
-              ]"
-            />
+              <input
+                v-model="rokForm.currentPower"
+                type="text"
+                required
+                placeholder="e.g. 500M"
+                maxlength="10"
+                :class="[
+                  'w-full rounded-lg border px-4 py-3 text-sm transition-all duration-300 ease-in-out',
+                  theme === 'dark'
+                    ? 'border-slate-600 bg-slate-700 text-slate-100 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
+                    : 'border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20',
+                ]"
+              />
           </div>
 
           <div class="space-y-2">
@@ -1161,6 +1165,7 @@
               rows="3"
               required
               placeholder="Describe key equipment"
+              maxlength="2000"
               :class="[
                 'w-full rounded-lg border px-4 py-3 text-sm transition-all duration-300 ease-in-out',
                 theme === 'dark'
@@ -1180,6 +1185,7 @@
               rows="3"
               required
               placeholder="List top commanders"
+              maxlength="2000"
               :class="[
                 'w-full rounded-lg border px-4 py-3 text-sm transition-all duration-300 ease-in-out',
                 theme === 'dark'
@@ -1194,17 +1200,18 @@
               :class="theme === 'dark' ? 'text-slate-200' : 'text-slate-700'">
               <span>Contact Link</span>
             </label>
-            <input
-              v-model="rokForm.contactLink"
-              type="url"
-              placeholder="Social media link"
-              :class="[
-                'w-full rounded-lg border px-4 py-3 text-sm transition-all duration-300 ease-in-out',
-                theme === 'dark'
-                  ? 'border-slate-600 bg-slate-700 text-slate-100 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
-                  : 'border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20',
-              ]"
-            />
+              <input
+                v-model="rokForm.contactLink"
+                type="url"
+                placeholder="Social media link"
+                maxlength="2048"
+                :class="[
+                  'w-full rounded-lg border px-4 py-3 text-sm transition-all duration-300 ease-in-out',
+                  theme === 'dark'
+                    ? 'border-slate-600 bg-slate-700 text-slate-100 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
+                    : 'border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20',
+                ]"
+              />
           </div>
 
           <div class="space-y-2">
@@ -1212,20 +1219,21 @@
               :class="theme === 'dark' ? 'text-slate-200' : 'text-slate-700'">
               <span>Contact Number *</span>
             </label>
-            <input
-              v-model="rokForm.contactNumber"
-              type="tel"
-              inputmode="tel"
-              pattern="^[0-9+()\s-]{7,20}$"
-              required
-              placeholder="+63 999-123-4567"
-              :class="[
-                'w-full rounded-lg border px-4 py-3 text-sm transition-all duration-300 ease-in-out',
-                theme === 'dark'
-                  ? 'border-slate-600 bg-slate-700 text-slate-100 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
-                  : 'border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20',
-              ]"
-            />
+              <input
+                v-model="rokForm.contactNumber"
+                type="tel"
+                inputmode="tel"
+                pattern="^[0-9+()\s-]{7,20}$"
+                maxlength="20"
+                required
+                placeholder="+63 999-123-4567"
+                :class="[
+                  'w-full rounded-lg border px-4 py-3 text-sm transition-all duration-300 ease-in-out',
+                  theme === 'dark'
+                    ? 'border-slate-600 bg-slate-700 text-slate-100 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
+                    : 'border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20',
+                ]"
+              />
           </div>
 
                     <div class="space-y-2">
@@ -1263,7 +1271,7 @@
           </label>
           <p class="text-xs"
             :class="theme === 'dark' ? 'text-slate-400' : 'text-slate-500'">
-            Upload up to 20 screenshots (max 5MB each)
+            Upload up to 5 screenshots (max 5MB each)
           </p>
           <div
             :class="[
@@ -1288,7 +1296,7 @@
             />
             <p class="mt-2 text-xs text-center"
               :class="theme === 'dark' ? 'text-slate-500' : 'text-slate-400'">
-              PNG, JPG, WebP, GIF up to 5MB each (max 20 images)
+              PNG, JPG, WebP, GIF up to 5MB each (max 5 images)
             </p>
           </div>
 
@@ -5260,7 +5268,7 @@ const handleRokImagesChange = (event: Event) => {
   const files = target?.files;
   if (!files) return;
 
-  const maxImages = 20;
+  const maxImages = 5;
   const currentCount = rokImagePreviews.value.length;
   const remainingSlots = maxImages - currentCount;
 

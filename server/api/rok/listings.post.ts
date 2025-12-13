@@ -112,8 +112,8 @@ export default defineEventHandler(async (event) => {
             const base64 = field.data.toString("base64");
             const imageData = `data:${mime};base64,${base64}`;
             validateImageData(imageData, 5);
-            if (images.length >= 20) {
-              throw new Error("Maximum 20 images allowed");
+            if (images.length >= 5) {
+              throw new Error("Maximum 5 images allowed");
             }
             images.push(imageData);
           }
